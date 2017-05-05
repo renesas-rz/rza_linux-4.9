@@ -20,7 +20,7 @@
 	};
 
 	chosen {
-		bootargs = "ignore_loglevel";
+		bootargs = "ignore_loglevel earlyprintk earlycon=scif,0xE8008000 root=/dev/mtdblock0               ";
 		stdout-path = "serial0:115200n8";
 	};
 
@@ -33,6 +33,27 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 	};
+
+	/* File System */
+	/* Remember, we'll be in dual QSPI XIP mode at this point */
+	/* Requires CONFIG_MTD_ROM=y */
+	qspi@18000000 {
+		compatible = "mtd-rom";
+		probe-type = "map_rom";
+		reg = <0x18000000 0x4000000>;	/* 64 MB*/
+		bank-width = <4>;
+		device-width = <1>;
+
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		partition@1000000 {
+			label ="user";
+			reg = <0x0800000 0x800000>; /* 8MB @ 0x18800000 */
+			read-only;
+		};
+	};
+
 };
 
 &extal_clk {
@@ -71,4 +92,16 @@
 
 &scif2 {
 	status = "okay";
+};
+
+/* RIIC0 (Touchscreen) */
+&i2c0 {
+	status = "okay";
+	clock-frequency = <400000>;
+};
+
+/* RIIC3: Port Expander, EEPROM (MAC Addr), Audio Codec */
+&i2c3 {
+	status = "okay";
+	clock-frequency = <100000>;
 };

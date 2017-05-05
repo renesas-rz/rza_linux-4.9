@@ -1,0 +1,182 @@
+/*
+ * This is used for testing the RZ/A1H RSK BSP drivers
+ *
+ */
+
+/* First, include all the normal RSK devices. Then we can override them
+ * later in the file.
+ */
+#include "r7s72100-rskrza1.dts"
+
+
+
+/* ========== No LED Heartbeat ========== */
+#if 0
+/* The LEDs are controlled using I2C inside a kernel thread that is
+ * started in the board-rskrza1.c file. */
+/ {
+	no-heartbeat;
+};
+#endif
+
+
+/* ========== RSPI Testing ========== */
+#if 0
+/* RSPI4 was tested by hooking up a SPI flash to CN15.
+ * Requires:
+ *   CONFIG_MTD=y
+ *   CONFIG_MTD_OF_PARTS=y
+ *   CONFIG_MTD_M25P80=y
+ *
+ * Note that you must change the IO MUX (IC29) on the RSK board
+ * to enable the CN15 connector (which disconnects Ethernet).
+ * Please enter this command in u-boot on the RSK board before booting
+ *   => io_mux c
+ *
+ * After boot:
+ * $ cat /proc/mtd
+ * dev:    size   erasesize  name
+ * mtd0: 00800000 04000000 "user"
+ * mtd1: 00400000 00010000 "spi-data1"
+ * mtd2: 00400000 00010000 "spi-data2"
+ *
+ * After that you should see some messages saying that your SPI flash has been
+ * detected.
+ * Then you can do things like erase and mount a JFFS2 file system:
+ * $ flash_eraseall -j /dev/mtd1
+ * $ mount -t jffs2 /dev/mtdblock1 /mnt
+ */
+
+/ {
+	rspi-testing;
+};
+&ether {
+	status = "disabled";
+};
+
+&spi4 {
+	status = "okay";
+
+	flash@0 {
+	/* 	compatible = "spansion,s25fl512s", "jedec,spi-nor"; */
+		compatible = "jedec,spi-nor";	/* let it auto-detect the flash */
+		reg = <0>;
+		spi-max-frequency = <30000000>;
+
+		/* SPI Mode 3 */
+		spi-cpol;
+		spi-cpha;
+
+		m25p,fast-read;
+
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			partition@0 {
+				label = "spi-data1";
+				reg = <0x00000000 0x00400000>;
+				/* read-only; */
+			};
+			partition@40000 {
+				label = "spi-data2";
+				reg = <0x00400000 0x00400000>;
+			};
+		};
+	};
+
+};
+
+#endif /* RSPI Testing */
+
+
+/* ========== MMC Testing ========== */
+#if 0
+/*
+ * MMC devices requires a 3.3 volt regulator node.
+ * Add a 3.3v "regulator-fixed" node at the root
+ */
+/ {
+	d3_3v: regulator-d3-3v {
+		compatible = "regulator-fixed";
+		regulator-name = "D3.3V";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+};
+
+/* Disable SDHI ch1 (since SDHI-1 and MMC both share CN1) */
+&sdhi1 {
+	status = "disabled";
+};
+
+/* Add the MMC device node */
+&mmcif {
+	vmmc-supply = <&d3_3v>;
+	vqmmc-supply = <&d3_3v>;
+	bus-width = <8>;
+	non-removable;
+	status = "okay";
+};
+#endif /* MMC Testing */
+
+
+/* ========== Parallel NOR Flash Testing ========== */
+#if 0
+/* 256 MiB NOR Flash
+ *
+ * Requires:
+ *   CONFIG_MTD=y
+ *   CONFIG_MTD_OF_PARTS=y
+ *   CONFIG_MTD_PHYSMAP=y
+ *   CONFIG_MTD_OF_PARTS=y
+ *   CONFIG_MTD_PHYSMAP_OF=y
+ *   CONFIG_MTD_CFI=y
+ *   CONFIG_MTD_CFI_AMDSTD=y
+ *   CONFIG_JFFS2 = y
+ *
+ * Testing:
+ * $ cat /proc/mtd
+ * dev:    size   erasesize  name
+ * mtd0: 00800000 04000000 "user"
+ * mtd1: 01000000 00020000 "nor_apps"
+ * mtd2: 01000000 00020000 "nor_data"
+ *
+ * $ flash_eraseall -j /dev/mtd1
+ * $ mkdir /tmp/flash
+ * $ mount -t jffs2 /dev/mtdblock1 /tmp/flash
+ * $ ls
+ *
+ * # Program a rootfs.jffs2 from Buildroot to the NOR Flash (maybe form a USB drive)
+ * $ flashcp <image dir>/rootfs.jffs2 /dev/mtd1
+ *     or
+ * $ cat /mnt/usb/rootfs.jffs2 > /dev/mtd1
+ *
+*/
+
+/ {
+	nor: flash@0 {
+		compatible = "cfi-flash";
+		reg = <0x00000000 0x2000000>;	/* 32 MB*/
+		bank-width = <2>;
+		device-width = <2>;
+
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		partition@0 {
+			label ="nor_apps";
+			reg = <0x00000000 0x01000000>; /* 16MB */
+		};
+
+		partition@01000000 {
+			label ="nor_data";
+			reg = <0x01000000 0x01000000>; /* 16MB */
+		};
+	};
+};
+#endif /* Parallel NOR Flash Testing */
+
