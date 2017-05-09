@@ -587,4 +587,27 @@
 		power-domains = <&cpg_clocks>;
 		status = "disabled";
 	};
+
+
+	/**** non-upstream drivers ****/
+
+	usbhost0: usb@e8010000 {
+		compatible = "renesas,r7s72100-r8a66597-hdc", "renesas,r8a66597-hdc";
+		reg = <0xe8010000 0x1A0>;
+		interrupts = <GIC_SPI (73-32) IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&mstp7_clks R7S72100_CLK_USB0>;
+		power-domains = <&cpg_clocks>;
+		status = "disabled";
+/*		dma-mask = <0>; */
+	};
+
+	usbhost1: usb@e8207000 {
+		compatible = "renesas,r7s72100-r8a66597-hdc", "renesas,r8a66597-hdc";
+		reg = <0xe8207000 0x1A0>;
+		interrupts = <GIC_SPI (74-32) IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&mstp7_clks R7S72100_CLK_USB1>;
+		power-domains = <&cpg_clocks>;
+		status = "disabled";
+/*		dma-mask = <0>; */
+	};
 };
