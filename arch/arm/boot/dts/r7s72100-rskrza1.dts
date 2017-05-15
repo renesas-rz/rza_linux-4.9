@@ -125,3 +125,72 @@
 	status = "okay";
 	xtal-48mhz;
 };
+
+/* RSK LCD: 800x600 LCD */
+/* Pacer TFT LCD Panel, Model gwp0700cnwv04 */
+#if XIP_KERNEL_WITHOUT_EXTERNAL_RAM
+  #define VDC5_0_BPP 16 /* 16bpp or 32bpp */
+  #define VDC5_0_FBSIZE (800*480*VDC5_0_BPP/8)
+  #define VDC5_0_FB_ADDR 0	/* allocate memory at probe */
+#else
+  #define VDC5_0_BPP 32 /* 16bpp or 32bpp */
+  #define VDC5_0_FBSIZE (800*480*VDC5_0_BPP/8)
+  #define VDC5_0_FB_ADDR (0x60000000) /* fixed address in PAGE 0 */
+#endif
+
+&vdc50 {
+	display = <&display0>;
+	status = "okay";
+
+	/* Set the physical frame buffer address for internal RAM. */
+	fb_phys_addr = <VDC5_0_FB_ADDR>;
+	fb_phys_size = <VDC5_0_FBSIZE>;
+
+	panel_name = "gwp0700cnwv04";
+	panel_pixel_xres = <800>;	/* panel native resolution */
+	panel_pixel_yres = <480>;	/* panel native resolution */
+
+
+	/* See 'drivers/video/fbdev/renesas/vdc5fb.h' for valid choices
+	* for panel_icksel, panel_ocksel, and out_format */
+	panel_icksel = <3>;	/* 3=ICKSEL_P1CLK (Peripheral clock 1) */
+	panel_ocksel = <0>;	/* (don't care when lvds=0 ) */
+	out_format = <0>;	/* 0=OUT_FORMAT_RGB888 */
+	use_lvds = <0>;		/* Set to 0 or 1 */
+
+	/* How are the TCON pins going to be used */
+	tcon_sel = <
+		0xff	/* TCON0: 0xff=TCON_SEL_UNUSED */
+		0xff	/* TCON1: 0xff=TCON_SEL_UNUSED */
+		7	/* TCON2:    7=TCON_SEL_DE (DATA ENABLE) */
+		2	/* TCON3:    2=TCON_SEL_STH (HSYNC) */
+		0	/* TCON4:    0=TCON_SEL_STVA (VSYNC) */
+		0xff	/* TCON5: 0xff=TCON_SEL_UNUSED */
+		0xff	/* TCON6: 0xff=TCON_SEL_UNUSED */
+		>;
+
+	display0: display0 {
+		bits-per-pixel = <VDC5_0_BPP>;
+		bus-width = <24>;
+
+		display-timings {
+			native-mode = <&timing0>;
+			timing0: timing0 {
+				clock-frequency = <33325000>; /* P1 clk / 2 */
+				hactive = <800>;
+				vactive = <480>;
+				hback-porch = <46>;
+				hfront-porch = <210>;
+				vback-porch = <23>;
+				vfront-porch = <22>;
+				hsync-len = <40>; /* max */
+				vsync-len = <20>; /* max */
+				hsync-active = <1>; /* HIGH */
+				vsync-active = <1>; /* HIGH */
+				de-active = <0>; /* LOW */
+				pixelclk-active = <0>; /* ??? */
+			};
+		};
+	};
+};
+

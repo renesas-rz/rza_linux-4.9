@@ -611,4 +611,28 @@
 		status = "disabled";
 /*		dma-mask = <0>; */
 	};
+
+	vdc50: display@fcff7400 {
+		compatible = "renesas,r7s72100-vdc5fb";
+		reg = <0xfcff7400 0x00000700>,
+		      <0xfcff6000 0x00001000>,
+		      <0xfcff7a30 0x00000030>;
+		reg-names = "reg", "clut", "lvds";
+		/* interrupts = (are not used with this driver) */
+		channel = <0>;
+		clocks = <&mstp9_clks R7S72100_CLK_VDC50>;
+		status = "disabled";
+	};
+
+	vdc51: display@fcff9400 {
+		compatible = "renesas,r7s72100-vdc5fb";
+		reg = <0xfcff9400 0x00000700>,
+		      <0xfcff6000 0x00001000>,
+		      <0xfcff7a30 0x00000030>;
+		reg-names = "reg", "clut", "lvds";
+		/* interrupts = (are not used with this driver) */
+		clocks = <&mstp9_clks R7S72100_CLK_VDC51>;
+		channel = <1>;
+		status = "disabled";
+	};
 };

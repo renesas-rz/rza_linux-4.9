@@ -41,6 +41,60 @@ static int __init rskrza1_pinmux_init(void)
 
 	/* NOTE: USB pins are dedicated */
 
+	/* VDC5 LCD channel 0 */
+	np = of_find_node_by_path("/display@fcff7400");
+	if (np) {
+		if (of_device_is_available(np)) {
+			int i;
+			int pin;
+
+			printk("=== LCD Enabled on CN44 ===\n");
+
+			/* LCD0_DATA0 to LCD0_DATA7 is P11_0 to P11_7 */
+			pin = P11_0;
+			for (i=0; i<=7; i++, pin++)
+				r7s72100_pfc_pin_assign(pin, ALT5, DIIO_PBDC_DIS);
+
+			/* LCD0_DATA8 to LCD0_DATA23 is all of P10_0 to P10_15 */
+			pin = P10_0;
+			for (i=0; i<=15; i++, pin++)
+				r7s72100_pfc_pin_assign(pin, ALT5, DIIO_PBDC_DIS);
+
+			/* LCD0_CLK */
+			r7s72100_pfc_pin_assign(P11_15, ALT5, DIIO_PBDC_DIS);
+
+			/* TCON pins (some may not be used) */
+			//r7s72100_pfc_pin_assign(P11_14, ALT5, DIIO_PBDC_DIS);	/* LCD0_TCON0 */
+			//r7s72100_pfc_pin_assign(P11_13, ALT5, DIIO_PBDC_DIS);	/* LCD0_TCON1 */
+			r7s72100_pfc_pin_assign(P11_12, ALT5, DIIO_PBDC_DIS);	/* LCD0_TCON2 */
+			r7s72100_pfc_pin_assign(P11_11, ALT5, DIIO_PBDC_DIS);	/* LCD0_TCON3 */
+			r7s72100_pfc_pin_assign(P11_10, ALT5, DIIO_PBDC_DIS);	/* LCD0_TCON4 */
+			//r7s72100_pfc_pin_assign(P11_9,  ALT5, DIIO_PBDC_DIS);	/* LCD0_TCON5 */
+			//r7s72100_pfc_pin_assign(P11_8,  ALT5, DIIO_PBDC_DIS);	/* LCD0_TCON6 */
+		}
+		of_node_put(np);
+	}
+
+	/* VDC5 LCD channel 1 (LVDS) */
+	np = of_find_node_by_path("/display@fcff9400");
+	if (np) {
+		if (of_device_is_available(np)) {
+			printk("=== LVDS Enabled on CN17 ===\n");
+
+			/* When using the LVDS pins, PIPCn.PIPCnm bits should be Set to 0
+			   and the port direction should be set as input. See Table 54.7 */
+			r7s72100_pfc_pin_assign(P5_0, ALT1, DIR_IN); /* TXCLKOUTP */
+			r7s72100_pfc_pin_assign(P5_1, ALT1, DIR_IN); /* TXCLKOUTM */
+			r7s72100_pfc_pin_assign(P5_2, ALT1, DIR_IN); /* TXOUT2P */
+			r7s72100_pfc_pin_assign(P5_3, ALT1, DIR_IN); /* TXOUT2M */
+			r7s72100_pfc_pin_assign(P5_4, ALT1, DIR_IN); /* TXOUT1P */
+			r7s72100_pfc_pin_assign(P5_5, ALT1, DIR_IN); /* TXOUT1M */
+			r7s72100_pfc_pin_assign(P5_6, ALT1, DIR_IN); /* TXOUT0P */
+			r7s72100_pfc_pin_assign(P5_7, ALT1, DIR_IN); /* TXOUT0M */
+		}
+		of_node_put(np);
+	}
+
 	/* MMC pins */
 	np = of_find_node_by_path("/mmc@e804c800");
 	if (np) {

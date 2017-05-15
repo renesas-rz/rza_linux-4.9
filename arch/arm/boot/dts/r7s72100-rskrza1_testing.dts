@@ -180,3 +180,73 @@
 };
 #endif /* Parallel NOR Flash Testing */
 
+
+/* ========== 1280x800 LVDS LCD Testing ========== */
+#if 0
+/* LVDS Panel: HSD070PWW1 -B01 | 1280x800 (WXVGA), 7", LVDS, 16bpp */
+#define VDC5_1_BPP 16
+#define VDC5_1_FBSIZE (1280*800*VDC5_1_BPP/8)
+#define VDC5_1_FB_ADDR (0x60200000) /* fixed address in PAGE 2 */
+
+&vdc50 {
+	/* Disable the RSK LCD (although, we really done need to because
+	 * we can drive 2 different displays at the same time */
+	status = "disabled";
+};
+
+&vdc51 {
+	display = <&display1>;
+	status = "okay";
+
+	/* Set the physical frame buffer address for internal RAM. */
+	fb_phys_addr = <VDC5_1_FB_ADDR>;
+	fb_phys_size = <VDC5_1_FBSIZE>;
+
+	panel_name = "HSD070PWW1";
+	panel_pixel_xres = <1280>;	/* panel native resolution */
+	panel_pixel_yres = <800>;	/* panel native resolution */
+
+	/* See 'drivers/video/fbdev/renesas/vdc5fb.h' for valid choices
+	* for panel_icksel, panel_ocksel, and out_format */
+	panel_icksel = <0>;	/* (don't care when lvds=1) */
+	panel_ocksel = <2>;	/* 2=OCKSEL_PLL_DIV7 (Peripheral clock 1) */
+	out_format = <0>;	/* 0=OUT_FORMAT_RGB888 */
+	use_lvds = <1>;		/* Set to 0 or 1 */
+
+	/* How are the TCON pins going to be used */
+	tcon_sel = <
+		0xff	/* TCON0: 0xff=TCON_SEL_UNUSED */
+		0xff	/* TCON1: 0xff=TCON_SEL_UNUSED */
+		0xff	/* TCON2: 0xff=TCON_SEL_UNUSED */
+		7	/* TCON3:    7=TCON_SEL_DE (DATA ENABLE) */
+		0xff	/* TCON4: 0xff=TCON_SEL_UNUSED */
+		0xff	/* TCON5: 0xff=TCON_SEL_UNUSED */
+		0xff	/* TCON6: 0xff=TCON_SEL_UNUSED */
+		>;
+
+	display1: display1 {
+		bits-per-pixel = <VDC5_1_BPP>;		/* Set to 16 or 32 */
+		bus-width = <16>;
+
+		display-timings {
+			native-mode = <&timing1>;
+			timing1: timing1 {
+				clock-frequency = <71100000>; /* min:64.3MHz, typ:71.1MHz, max:82MHz */
+				hactive = <1280>;
+				vactive = <800>;
+				hback-porch = <16>;
+				hfront-porch = <16>;
+				vback-porch = <24>;
+				vfront-porch = <1>;
+				hsync-len = <136>; /* max */
+				vsync-len = <3>; /* max */
+				hsync-active = <1>; /* HIGH */
+				vsync-active = <1>; /* HIGH */
+				de-active = <0>; /* LOW */
+				pixelclk-active = <0>; /* ??? */
+			};
+		};
+	};
+};
+#endif /* LVDS Testing */
+
