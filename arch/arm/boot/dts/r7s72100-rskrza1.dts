@@ -106,6 +106,19 @@
 &i2c0 {
 	status = "okay";
 	clock-frequency = <400000>;
+
+	ft5x06_ts@38 {
+		compatible = "focaltech,ft5x06";
+		reg = <0x38>;
+		interrupts = <GIC_SPI (33-32) IRQ_TYPE_LEVEL_HIGH>; /* IRQ1 */
+
+		touchscreen-size-x = <800>;
+		touchscreen-size-y = <480>;
+
+		/* The touchscreen on the RSK LCD is backwards for some reason */
+		touchscreen-inverted-x;
+		touchscreen-inverted-y;
+	};
 };
 
 /* RIIC3: Port Expander, EEPROM (MAC Addr), Audio Codec */
