@@ -29,6 +29,8 @@
 		spi2 = &spi2;
 		spi3 = &spi3;
 		spi4 = &spi4;
+		spi5 = &spibsc0;
+		spi6 = &spibsc1;
 	};
 
 	clocks {
@@ -162,12 +164,12 @@
 			#clock-cells = <1>;
 			compatible = "renesas,r7s72100-mstp-clocks", "renesas,cpg-mstp-clocks";
 			reg = <0xfcfe0438 4>;
-			clocks = <&p0_clk>, <&p0_clk>, <&p0_clk>, <&p0_clk>, <&p1_clk>, <&p1_clk>;
+			clocks = <&p0_clk>, <&p0_clk>, <&p0_clk>, <&p0_clk>, <&p1_clk>, <&p1_clk>, <&b_clk>, <&b_clk>;
 			clock-indices = <
 				R7S72100_CLK_I2C0 R7S72100_CLK_I2C1 R7S72100_CLK_I2C2 R7S72100_CLK_I2C3
-				R7S72100_CLK_VDC50 R7S72100_CLK_VDC51
+				R7S72100_CLK_VDC50 R7S72100_CLK_VDC51 R7S72100_CLK_SPIBSC0 R7S72100_CLK_SPIBSC1
 			>;
-			clock-output-names = "i2c0", "i2c1", "i2c2", "i2c3", "vdc50", "vdc51";
+			clock-output-names = "i2c0", "i2c1", "i2c2", "i2c3", "vdc50", "vdc51", "spibsc0", "spibsc1";
 		};
 
 		mstp10_clks: mstp10_clks@fcfe043c {
@@ -633,6 +635,24 @@
 		/* interrupts = (are not used with this driver) */
 		clocks = <&mstp9_clks R7S72100_CLK_VDC51>;
 		channel = <1>;
+		status = "disabled";
+	};
+
+	spibsc0: spi@3fefa000 {
+		compatible = "renesas,r7s72100-spibsc";
+		reg = <0x3fefa000 0x100>;
+		clocks = <&mstp9_clks R7S72100_CLK_SPIBSC0>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		status = "disabled";
+	};
+
+	spibsc1: spi@3fefb000 {
+		compatible = "renesas,r7s72100-spibsc";
+		reg = <0x3fefb000 0x100>;
+		clocks = <&mstp9_clks R7S72100_CLK_SPIBSC1>;
+		#address-cells = <1>;
+		#size-cells = <0>;
 		status = "disabled";
 	};
 };

@@ -250,3 +250,95 @@
 };
 #endif /* LVDS Testing */
 
+/* ========== SPIBSC (QSPI) Testing ========== */
+#if 0
+/* Booted as uImage with a initramfs. (or with a USB Flash drive)
+ *
+ * * Requires:
+ *   CONFIG_MTD=y
+ *   CONFIG_MTD_OF_PARTS=y
+ *   CONFIG_MTD_M25P80=y
+ *
+ * NOTE: When booting, do NOT leave the QSPI in XIP mode (ie, the 'qspi single' command
+ *
+ * When booting, you should see:
+ *   spibsc 3fefa000.spi: JEDEC ID = 010220
+ *   spibsc 3fefa000.spi: Quad Read enabled for Spansion
+ *   m25p80 spi5.0: s25fl512s (65536 Kbytes)
+ *   4 ofpart partitions found on MTD device spi5.0
+ *   Creating 4 MTD partitions on "spi5.0":
+ *   0x000000000000-0x000000080000 : "u-boot"
+ *   0x000000080000-0x0000000c0000 : "env"
+ *   0x0000000c0000-0x000000100000 : "dtb"
+ *   0x000002000000-0x000002100000 : "spibsc-rootfs"
+ *
+ * After boot:
+ * $ cat /proc/mtd
+ * dev:    size   erasesize  name
+ * mtd0: 00800000 04000000 "user"
+ * mtd1: 00080000 00040000 "u-boot"
+ * mtd2: 00040000 00040000 "env"
+ * mtd3: 00040000 00040000 "dtb"
+ * mtd4: 00100000 00040000 "spibsc-rootfs"
+ *
+ * You can do things like erase and mount a JFFS2 file system:
+ * $ flash_eraseall -j /dev/mtd4
+ * $ mount -t jffs2 /dev/mtdblock4 /mnt
+ * $ echo "hello" > /mnt/hello.txt
+ * $ sync
+ */
+/ {
+	chosen {
+#if 0
+		bootargs = "ignore_loglevel earlyprintk earlycon=scif,0xE8008000              ";
+#else
+		bootargs = "ignore_loglevel earlyprintk earlycon=scif,0xE8008000 rootwait root=/dev/mmcblk0p1   ";
+#endif
+		stdout-path = "serial0:115200n8";
+	};
+};
+
+&spibsc0 {
+	status = "okay";
+
+	flash@0 {
+	/*	compatible = "spansion,s25fl512s", "jedec,spi-nor"; */
+		compatible = "jedec,spi-nor";	/* let it auto-detect the flash */
+		reg = <0>;
+
+		spi-max-frequency = <66000000>;
+
+		/* SPI Mode 3 */
+		spi-cpol;
+		spi-cpha;
+		m25p,fast-read;
+
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			partition@0000000 {
+				label = "u-boot";
+				reg = <0x00000000 0x80000>;
+				read-only;
+			};
+			partition@80000 {
+				label = "env";
+				reg = <0x00080000 0x40000>;
+				read-only;
+			};
+			partition@C0000 {
+				label = "dtb";
+				reg = <0x000C0000 0x40000>;
+				read-only;
+			};
+			partition@2000000 {
+				label = "spibsc-rootfs";
+				reg = <0x02000000 0x01000000>;	/* 16MB @ 32MB offset in SPI Flash */
+			};
+		};
+	};
+};
+#endif
+
