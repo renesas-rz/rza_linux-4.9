@@ -23,7 +23,7 @@ static int __init rskrza1_pinmux_init(void)
 	r7s72100_pinmux_setup();
 
 	/* ------------ Pin setup section ---------------*/
-	r7s72100_pfc_pin_assign(P1_15, ALT1, DIIO_PBDC_EN);	/* AD7 */
+	r7s72100_pfc_pin_assign(P1_15, ALT1, DIIO_PBDC_DIS);	/* AD7 */
 
 	/* RIIC ch 0 (Touchscreen) */
 	r7s72100_pfc_pin_assign(P1_0, ALT1, DIIO_PBDC_EN);	/* I2C SCL0 */
@@ -36,8 +36,8 @@ static int __init rskrza1_pinmux_init(void)
 	/* Audio */
 	r7s72100_pfc_pin_assign(P4_4, ALT5, DIIO_PBDC_EN);	/* SSISCK0 */
 	r7s72100_pfc_pin_assign(P4_5, ALT5, DIIO_PBDC_EN);	/* SSIWS0 */
-	r7s72100_pfc_pin_assign(P4_6, ALT5, DIIO_PBDC_EN);	/* SSIRxD0 */
-	r7s72100_pfc_pin_assign(P4_7, ALT5, SWIO_OUT_PBDCEN);	/* SSITxD0 */
+	r7s72100_pfc_pin_assign(P4_6, ALT5, DIIO_PBDC_DIS);	/* SSIRxD0 */
+	r7s72100_pfc_pin_assign(P4_7, ALT5, SWIO_OUT_PBDCDIS);	/* SSITxD0 */
 
 	/* NOTE: USB pins are dedicated */
 
@@ -81,8 +81,14 @@ static int __init rskrza1_pinmux_init(void)
 		if (of_device_is_available(np)) {
 			printk("=== LVDS Enabled on CN17 ===\n");
 
-			/* When using the LVDS pins, PIPCn.PIPCnm bits should be Set to 0
-			   and the port direction should be set as input. See Table 54.7 */
+			/*
+			 * When using the LVDS pins, PIPCn.PIPCnm bits should be set to 0
+			 * and the port direction should be set as input. See Table 54.7.
+			 * The reason it is set to input is because the LVDS block has
+			 * its own set of output drivers so we need to set the port
+			 * to input in order to disable the normal output port drivers so
+			 * they do not conflict.
+			 */
 			r7s72100_pfc_pin_assign(P5_0, ALT1, DIR_IN); /* TXCLKOUTP */
 			r7s72100_pfc_pin_assign(P5_1, ALT1, DIR_IN); /* TXCLKOUTM */
 			r7s72100_pfc_pin_assign(P5_2, ALT1, DIR_IN); /* TXOUT2P */
@@ -118,20 +124,20 @@ static int __init rskrza1_pinmux_init(void)
 			/* MMC on CN1 */
 			printk("=== MMC Enabled on CN1 ===\n");
 			r7s72100_pfc_pin_assign(P3_8, ALT8, DIIO_PBDC_DIS);	/* MMC CD */
-			r7s72100_pfc_pin_assign(P3_10, ALT8, DIIO_PBDC_DIS);	/* MMC DAT1 */
-			r7s72100_pfc_pin_assign(P3_11, ALT8, DIIO_PBDC_DIS);	/* MMC DAT0 */
+			r7s72100_pfc_pin_assign(P3_10, ALT8, DIIO_PBDC_EN);	/* MMC DAT1 */
+			r7s72100_pfc_pin_assign(P3_11, ALT8, DIIO_PBDC_EN);	/* MMC DAT0 */
 			r7s72100_pfc_pin_assign(P3_12, ALT8, DIIO_PBDC_DIS);	/* MMC CLK */
-			r7s72100_pfc_pin_assign(P3_13, ALT8, DIIO_PBDC_DIS);	/* MMC CMD */
-			r7s72100_pfc_pin_assign(P3_14, ALT8, DIIO_PBDC_DIS);	/* MMC DAT3*/
-			r7s72100_pfc_pin_assign(P3_15, ALT8, DIIO_PBDC_DIS);	/* MMC DAT2 */
-			r7s72100_pfc_pin_assign(P4_0, ALT8, DIIO_PBDC_DIS);	/* MMC DAT4 */
-			r7s72100_pfc_pin_assign(P4_1, ALT8, DIIO_PBDC_DIS);	/* MMC DAT5 */
-			r7s72100_pfc_pin_assign(P4_2, ALT8, DIIO_PBDC_DIS);	/* MMC DAT6*/
-			r7s72100_pfc_pin_assign(P4_3, ALT8, DIIO_PBDC_DIS);	/* MMC DAT7 */
+			r7s72100_pfc_pin_assign(P3_13, ALT8, DIIO_PBDC_EN);	/* MMC CMD */
+			r7s72100_pfc_pin_assign(P3_14, ALT8, DIIO_PBDC_EN);	/* MMC DAT3*/
+			r7s72100_pfc_pin_assign(P3_15, ALT8, DIIO_PBDC_EN);	/* MMC DAT2 */
+			r7s72100_pfc_pin_assign(P4_0, ALT8, DIIO_PBDC_EN);	/* MMC DAT4 */
+			r7s72100_pfc_pin_assign(P4_1, ALT8, DIIO_PBDC_EN);	/* MMC DAT5 */
+			r7s72100_pfc_pin_assign(P4_2, ALT8, DIIO_PBDC_EN);	/* MMC DAT6*/
+			r7s72100_pfc_pin_assign(P4_3, ALT8, DIIO_PBDC_EN);	/* MMC DAT7 */
 		}
 		of_node_put(np);
 	}
-	
+
 	/* SDHI ch 0 pins */
 	//np = of_find_node_by_path("/sd@e804e000");
 
@@ -206,7 +212,7 @@ early_initcall(rskrza1_pinmux_init);
 static int __init rskrza1_init_early(void)
 {
 	//printk("=== %s ===\n",__func__);
-	
+
 	return 0;
 }
 early_initcall(rskrza1_init_early);
