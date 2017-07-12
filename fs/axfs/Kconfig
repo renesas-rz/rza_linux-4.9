@@ -1,5 +1,5 @@
 config AXFS
-	tristate "Advanced XIP File System (AXFS) support (EXPERIMENTAL)"
+	tristate "Advanced XIP File System (AXFS) support"
 	select FS_XIP
 	select ZLIB_INFLATE
 	default n
