@@ -121,6 +121,63 @@
 			 <RZA1_PINMUX(3, 14, 7)>,	/* SD_D3_1 */
 			 <RZA1_PINMUX(3, 15, 7)>;	/* SD_D2_1 */
 	};
+
+	/* RIIC ch0 (Touchscreen) */
+	i2c0_pins: i2c0 {
+		pinmux = <RZA1_PINMUX(1, 0, 1)>,	/* RIIC0SCL */
+			 <RZA1_PINMUX(1, 1, 1)>;	/* RIIC0SDA */
+	};
+
+	/* RIIC ch3 (Port Expander, EEPROM (MAC Addr), Audio Codec) */
+	i2c3_pins: i2c3 {
+		pinmux = <RZA1_PINMUX(1, 6, 1)>,	/* RIIC3SCL */
+			 <RZA1_PINMUX(1, 7, 1)>;	/* RIIC3SDA */
+	};
+
+	/* VDC5 LCD ch 0 */
+	vdc50_pins: vdc50 {
+
+		pinmux =
+			/* LCD0_DATA0 to LCD0_DATA7 is P11_0 to P11_7 */
+			<RZA1_PINMUX(11, 0,  5)>,	/* LCD0_DATA0 */
+			<RZA1_PINMUX(11, 1,  5)>,	/* LCD0_DATA1 */
+			<RZA1_PINMUX(11, 2,  5)>,	/* LCD0_DATA2 */
+			<RZA1_PINMUX(11, 3,  5)>,	/* LCD0_DATA3 */
+			<RZA1_PINMUX(11, 4,  5)>,	/* LCD0_DATA4 */
+			<RZA1_PINMUX(11, 5,  5)>,	/* LCD0_DATA5 */
+			<RZA1_PINMUX(11, 6,  5)>,	/* LCD0_DATA6 */
+			<RZA1_PINMUX(11, 7,  5)>,	/* LCD0_DATA7 */
+
+			/* LCD0_DATA8 to LCD0_DATA23 is all of P10_0 to P10_15 */
+			<RZA1_PINMUX(10, 0,  5)>,	/* LCD0_DATA8 */
+			<RZA1_PINMUX(10, 1,  5)>,	/* LCD0_DATA9 */
+			<RZA1_PINMUX(10, 2,  5)>,	/* LCD0_DATA10 */
+			<RZA1_PINMUX(10, 3,  5)>,	/* LCD0_DATA11 */
+			<RZA1_PINMUX(10, 4,  5)>,	/* LCD0_DATA12 */
+			<RZA1_PINMUX(10, 5,  5)>,	/* LCD0_DATA13 */
+			<RZA1_PINMUX(10, 6,  5)>,	/* LCD0_DATA14 */
+			<RZA1_PINMUX(10, 7,  5)>,	/* LCD0_DATA15 */
+			<RZA1_PINMUX(10, 8,  5)>,	/* LCD0_DATA16 */
+			<RZA1_PINMUX(10, 9,  5)>,	/* LCD0_DATA17 */
+			<RZA1_PINMUX(10, 10, 5)>,	/* LCD0_DATA18 */
+			<RZA1_PINMUX(10, 11, 5)>,	/* LCD0_DATA19 */
+			<RZA1_PINMUX(10, 12, 5)>,	/* LCD0_DATA20 */
+			<RZA1_PINMUX(10, 13, 5)>,	/* LCD0_DATA21 */
+			<RZA1_PINMUX(10, 14, 5)>,	/* LCD0_DATA22 */
+			<RZA1_PINMUX(10, 15, 5)>,	/* LCD0_DATA23 */
+
+
+			/* TCON pins (some may not be used) */
+			//<RZA1_PINMUX(11,14, 5)>,	/* LCD0_TCON0 */
+			//<RZA1_PINMUX(11,13, 5)>,	/* LCD0_TCON1 */
+			<RZA1_PINMUX(11,12, 5)>,	/* LCD0_TCON2 */
+			<RZA1_PINMUX(11,11, 5)>,	/* LCD0_TCON3 */
+			<RZA1_PINMUX(11,10, 5)>,	/* LCD0_TCON4 */
+			//<RZA1_PINMUX(11,9,  5)>,	/* LCD0_TCON5 */
+			//<RZA1_PINMUX(11,8,  5)>,	/* LCD0_TCON6 */
+
+			<RZA1_PINMUX(11, 15, 5)>;	/* LCD0_CLK */
+	};
 };
 
 &mtu2 {
@@ -165,6 +222,8 @@
 
 /* RIIC0 (Touchscreen) */
 &i2c0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c0_pins>;
 	status = "okay";
 	clock-frequency = <400000>;
 
@@ -184,6 +243,8 @@
 
 /* RIIC3: Port Expander, EEPROM (MAC Addr), Audio Codec */
 &i2c3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c3_pins>;
 	status = "okay";
 	clock-frequency = <100000>;
 };
@@ -213,6 +274,9 @@
 #endif
 
 &vdc50 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&vdc50_pins>;
+
 	display = <&display0>;
 	status = "okay";
 

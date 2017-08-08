@@ -51,10 +51,25 @@
 	rspi-testing;
 };
 &ether {
+	/* RSKRZA1 Board SPI4 is on CN15 (that means you can't use Ethernet) */
 	status = "disabled";
 };
 
+/* Pin setup for RSPI4 */
+&pinctrl {
+
+	/* RSPI4 on CN15 */
+	rspi4_pins: rspi4 {
+		pinmux = <RZA1_PINMUX(2, 8,  8)>,	/* RSPCK4 */
+			 <RZA1_PINMUX(2, 9,  8)>,	/* SSL40 */
+			 <RZA1_PINMUX(2, 10, 8)>,	/* MOSI4 */
+			 <RZA1_PINMUX(2, 11, 8)>;	/* MISO4 */
+	};
+};
+
 &spi4 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&rspi4_pins>;
 	status = "okay";
 
 	flash@0 {
@@ -113,8 +128,29 @@
 	status = "disabled";
 };
 
+/* Pin setup for MMC */
+&pinctrl {
+
+	/* MMC on CN1 */
+	mmc_pins: mmc {
+		pinmux = <RZA1_PINMUX(3, 8,  8)>,	/* MMC_CD */
+			 <RZA1_PINMUX(3, 10, 8)>,	/* MMC_D1 */
+			 <RZA1_PINMUX(3, 11, 8)>,	/* MMC_D0 */
+			 <RZA1_PINMUX(3, 12, 8)>,	/* MMC_CLK */
+			 <RZA1_PINMUX(3, 13, 8)>,	/* MMC_CMD */
+			 <RZA1_PINMUX(3, 14, 8)>,	/* MMC_D3 */
+			 <RZA1_PINMUX(3, 15, 8)>,	/* MMC_D2 */
+			 <RZA1_PINMUX(4, 0,  8)>,	/* MMC_D4 */
+			 <RZA1_PINMUX(4, 1,  8)>,	/* MMC_D5 */
+			 <RZA1_PINMUX(4, 2,  8)>,	/* MMC_D6 */
+			 <RZA1_PINMUX(4, 3,  8)>;	/* MMC_D7 */
+	};
+};
+
 /* Add the MMC device node */
 &mmcif {
+	pinctrl-names = "default";
+	pinctrl-0 = <&mmc_pins>;
 	vmmc-supply = <&d3_3v>;
 	vqmmc-supply = <&d3_3v>;
 	bus-width = <8>;
@@ -194,7 +230,25 @@
 	status = "disabled";
 };
 
+/* Pin setup for LVDS */
+&pinctrl {
+	/* VDC5 LCD ch 1 */
+	vdc51_pins: vdc51 {
+		pinmux = <RZA1_PINMUX(5, 0, 1)>,	/* TXCLKOUTP */
+			 <RZA1_PINMUX(5, 1, 1)>,	/* TXCLKOUTM */
+			 <RZA1_PINMUX(5, 2, 1)>,	/* TXOUT2P */
+			 <RZA1_PINMUX(5, 3, 1)>,	/* TXOUT2M */
+			 <RZA1_PINMUX(5, 4, 1)>,	/* TXOUT1P */
+			 <RZA1_PINMUX(5, 5, 1)>,	/* TXOUT1M */
+			 <RZA1_PINMUX(5, 6, 1)>,	/* TXOUT0P */
+			 <RZA1_PINMUX(5, 7, 1)>;	/* TXOUT0M */
+	};
+};
+
 &vdc51 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&vdc51_pins>;
+
 	display = <&display1>;
 	status = "okay";
 

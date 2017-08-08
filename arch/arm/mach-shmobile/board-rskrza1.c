@@ -26,14 +26,6 @@ static int __init rskrza1_pinmux_init(void)
 	/* ------------ Pin setup section ---------------*/
 	r7s72100_pfc_pin_assign(P1_15, ALT1, DIIO_PBDC_DIS);	/* AD7 */
 
-	/* RIIC ch 0 (Touchscreen) */
-	r7s72100_pfc_pin_assign(P1_0, ALT1, DIIO_PBDC_EN);	/* I2C SCL0 */
-	r7s72100_pfc_pin_assign(P1_1, ALT1, DIIO_PBDC_EN);	/* I2C SDA0 */
-
-	/* RIIC ch 3 (Port Expander, EEPROM (MAC Addr), Audio Codec) */
-	r7s72100_pfc_pin_assign(P1_6, ALT1, DIIO_PBDC_EN);	/* I2C SCL3 */
-	r7s72100_pfc_pin_assign(P1_7, ALT1, DIIO_PBDC_EN);	/* I2C SDA3 */
-
 	/* Audio */
 	r7s72100_pfc_pin_assign(P4_4, ALT5, DIIO_PBDC_EN);	/* SSISCK0 */
 	r7s72100_pfc_pin_assign(P4_5, ALT5, DIIO_PBDC_EN);	/* SSIWS0 */
@@ -41,66 +33,6 @@ static int __init rskrza1_pinmux_init(void)
 	r7s72100_pfc_pin_assign(P4_7, ALT5, SWIO_OUT_PBDCDIS);	/* SSITxD0 */
 
 	/* NOTE: USB pins are dedicated */
-
-	/* VDC5 LCD channel 0 */
-	np = of_find_node_by_path("/display@fcff7400");
-	if (np) {
-		if (of_device_is_available(np)) {
-			int i;
-			int pin;
-
-			printk("=== LCD Enabled on CN44 ===\n");
-
-			/* LCD0_DATA0 to LCD0_DATA7 is P11_0 to P11_7 */
-			pin = P11_0;
-			for (i=0; i<=7; i++, pin++)
-				r7s72100_pfc_pin_assign(pin, ALT5, DIIO_PBDC_DIS);
-
-			/* LCD0_DATA8 to LCD0_DATA23 is all of P10_0 to P10_15 */
-			pin = P10_0;
-			for (i=0; i<=15; i++, pin++)
-				r7s72100_pfc_pin_assign(pin, ALT5, DIIO_PBDC_DIS);
-
-			/* LCD0_CLK */
-			r7s72100_pfc_pin_assign(P11_15, ALT5, DIIO_PBDC_DIS);
-
-			/* TCON pins (some may not be used) */
-			//r7s72100_pfc_pin_assign(P11_14, ALT5, DIIO_PBDC_DIS);	/* LCD0_TCON0 */
-			//r7s72100_pfc_pin_assign(P11_13, ALT5, DIIO_PBDC_DIS);	/* LCD0_TCON1 */
-			r7s72100_pfc_pin_assign(P11_12, ALT5, DIIO_PBDC_DIS);	/* LCD0_TCON2 */
-			r7s72100_pfc_pin_assign(P11_11, ALT5, DIIO_PBDC_DIS);	/* LCD0_TCON3 */
-			r7s72100_pfc_pin_assign(P11_10, ALT5, DIIO_PBDC_DIS);	/* LCD0_TCON4 */
-			//r7s72100_pfc_pin_assign(P11_9,  ALT5, DIIO_PBDC_DIS);	/* LCD0_TCON5 */
-			//r7s72100_pfc_pin_assign(P11_8,  ALT5, DIIO_PBDC_DIS);	/* LCD0_TCON6 */
-		}
-		of_node_put(np);
-	}
-
-	/* VDC5 LCD channel 1 (LVDS) */
-	np = of_find_node_by_path("/display@fcff9400");
-	if (np) {
-		if (of_device_is_available(np)) {
-			printk("=== LVDS Enabled on CN17 ===\n");
-
-			/*
-			 * When using the LVDS pins, PIPCn.PIPCnm bits should be set to 0
-			 * and the port direction should be set as input. See Table 54.7.
-			 * The reason it is set to input is because the LVDS block has
-			 * its own set of output drivers so we need to set the port
-			 * to input in order to disable the normal output port drivers so
-			 * they do not conflict.
-			 */
-			r7s72100_pfc_pin_assign(P5_0, ALT1, DIR_IN); /* TXCLKOUTP */
-			r7s72100_pfc_pin_assign(P5_1, ALT1, DIR_IN); /* TXCLKOUTM */
-			r7s72100_pfc_pin_assign(P5_2, ALT1, DIR_IN); /* TXOUT2P */
-			r7s72100_pfc_pin_assign(P5_3, ALT1, DIR_IN); /* TXOUT2M */
-			r7s72100_pfc_pin_assign(P5_4, ALT1, DIR_IN); /* TXOUT1P */
-			r7s72100_pfc_pin_assign(P5_5, ALT1, DIR_IN); /* TXOUT1M */
-			r7s72100_pfc_pin_assign(P5_6, ALT1, DIR_IN); /* TXOUT0P */
-			r7s72100_pfc_pin_assign(P5_7, ALT1, DIR_IN); /* TXOUT0M */
-		}
-		of_node_put(np);
-	}
 
 	/* Set up IRQ for touchscreen */
 	{
@@ -116,63 +48,6 @@ static int __init rskrza1_pinmux_init(void)
 		writew(val, irc1);
 		iounmap(irc1);
 		r7s72100_pfc_pin_assign(P4_9, ALT8, DIIO_PBDC_DIS);  /* IRQ1 */
-	}
-
-	/* MMC pins */
-	np = of_find_node_by_path("/mmc@e804c800");
-	if (np) {
-		if (of_device_is_available(np)) {
-			/* MMC on CN1 */
-			printk("=== MMC Enabled on CN1 ===\n");
-			r7s72100_pfc_pin_assign(P3_8, ALT8, DIIO_PBDC_DIS);	/* MMC CD */
-			r7s72100_pfc_pin_assign(P3_10, ALT8, DIIO_PBDC_EN);	/* MMC DAT1 */
-			r7s72100_pfc_pin_assign(P3_11, ALT8, DIIO_PBDC_EN);	/* MMC DAT0 */
-			r7s72100_pfc_pin_assign(P3_12, ALT8, DIIO_PBDC_DIS);	/* MMC CLK */
-			r7s72100_pfc_pin_assign(P3_13, ALT8, DIIO_PBDC_EN);	/* MMC CMD */
-			r7s72100_pfc_pin_assign(P3_14, ALT8, DIIO_PBDC_EN);	/* MMC DAT3*/
-			r7s72100_pfc_pin_assign(P3_15, ALT8, DIIO_PBDC_EN);	/* MMC DAT2 */
-			r7s72100_pfc_pin_assign(P4_0, ALT8, DIIO_PBDC_EN);	/* MMC DAT4 */
-			r7s72100_pfc_pin_assign(P4_1, ALT8, DIIO_PBDC_EN);	/* MMC DAT5 */
-			r7s72100_pfc_pin_assign(P4_2, ALT8, DIIO_PBDC_EN);	/* MMC DAT6*/
-			r7s72100_pfc_pin_assign(P4_3, ALT8, DIIO_PBDC_EN);	/* MMC DAT7 */
-		}
-		of_node_put(np);
-	}
-
-	/* SDHI ch 0 pins */
-	//np = of_find_node_by_path("/sd@e804e000");
-
-	/* SDHI ch 1 pins */
-	np = of_find_node_by_path("/sd@e804e800");
-	if (np) {
-		if (of_device_is_available(np)) {
-			/* SHDI ch1 on CN1 */
-			printk("=== SDHI Enabled on CN1 ===\n");
-			r7s72100_pfc_pin_assign(P3_8, ALT7, DIIO_PBDC_DIS);	/* SDHI1 CD */
-			r7s72100_pfc_pin_assign(P3_9, ALT7, DIIO_PBDC_DIS);	/* SDHI1 WP */
-			r7s72100_pfc_pin_assign(P3_10, ALT7, DIIO_PBDC_EN);	/* SDHI1 DAT1 */
-			r7s72100_pfc_pin_assign(P3_11, ALT7, DIIO_PBDC_EN);	/* SDHI1 DAT0 */
-			r7s72100_pfc_pin_assign(P3_12, ALT7, DIIO_PBDC_DIS);	/* SDHI1 CLK */
-			r7s72100_pfc_pin_assign(P3_13, ALT7, DIIO_PBDC_EN);	/* SDHI1 CMD */
-			r7s72100_pfc_pin_assign(P3_14, ALT7, DIIO_PBDC_EN);	/* SDHI1 DAT3*/
-			r7s72100_pfc_pin_assign(P3_15, ALT7, DIIO_PBDC_EN);	/* SDHI1 DAT2 */
-		}
-		of_node_put(np);
-	}
-
-
-	/* RSPI4 */
-	/* Add "rspi4-testing" to the device tree to enable this code */
-	/* Make sure you execute "io_mux c" in u-boot before booting */
-	if (of_property_read_bool(root, "rspi-testing")) {
-
-		/* Enable SPI4 pins */
-		/* RSKRZA1 Board SPI4 is on CN15 (but that means you can't use Ethernet) */
-		printk("== RSPI4 enabled on CN15 ==\n");
-		r7s72100_pfc_pin_assign(P2_8, ALT8, DIIO_PBDC_EN);	/* RSPCK4 */
-		r7s72100_pfc_pin_assign(P2_9, ALT8, DIIO_PBDC_EN);	/* SSL40 */
-		r7s72100_pfc_pin_assign(P2_10, ALT8, DIIO_PBDC_EN);	/* MOSI4 */
-		r7s72100_pfc_pin_assign(P2_11, ALT8, DIIO_PBDC_EN);	/* MISO4 */
 	}
 
 	/* SCIF 1 pins */
