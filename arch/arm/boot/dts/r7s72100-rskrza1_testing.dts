@@ -19,6 +19,17 @@
 };
 #endif
 
+/* ========== LED GPIO Testing ========== */
+/* To control LED0 on the RSK board.
+ *
+ * Requires:
+ *   CONFIG_NEW_LEDS=y
+ *   CONFIG_LEDS_CLASS=y
+ *   CONFIG_LEDS_GPIO=y
+ *
+ * LED ON:  echo 255 > /sys/class/leds/led0/brightness
+ * LED OFF: echo 0   > /sys/class/leds/led0/brightness
+*/
 
 /* ========== RSPI Testing ========== */
 #if 0
