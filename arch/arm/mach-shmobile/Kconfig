@@ -113,6 +113,9 @@ comment "Renesas RZ/A1 Board Support"
 config MACH_RSKRZA1
 	bool "RZ/A1 RSK board"
 
+config MACH_GENMAI
+	bool "GENMAI board"
+
 #--------------------------------------------
 # Custom RZ/A Boards
 # Enter your custom board files below this line (to avoid merge conflicts)
