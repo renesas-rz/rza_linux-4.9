@@ -28,7 +28,7 @@ obj-$(CONFIG_MACH_GENMAI)	+= board-genmai.o
 #--------------------------------------------
 # Custom RZ/A Boards
 # Enter your custom board files below this line (to avoid merge conflicts)
-#--------------------------------------------
+#---------------------------------------------
 
 
 # CPU reset vector handling objects
