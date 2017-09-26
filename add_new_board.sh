@@ -361,11 +361,6 @@ source /tmp/whipcmd.txt
 
     hasmmc=$(cat /tmp/answer.txt)
 
-    # MMC and SDHI-0 are on the same pins
-    if [ "$hasmmc" == "yes" ] && [ "$hassdhi" == "ch0" ] ; then
-      hassdhi=no
-    fi
-
     continue
   fi
 
@@ -375,20 +370,11 @@ source /tmp/whipcmd.txt
   echo "$ans" | grep -q "SD Card (SDIO):"
   if [ "$?" == "0" ] ; then
 
-    if [ "$hasmmc" == "no" ] ; then
-      whiptail --title "SD Card (SDIO)" --nocancel --menu "Does this board have SD Card (SDIO)?" 0 0 0 \
+    whiptail --title "SD Card (SDIO)" --nocancel --menu "Does this board have SD Card (SDIO)?" 0 0 0 \
 	"ch0" "SDHI-0" \
 	"ch1" "SDHI-1" \
 	"no" "" \
 	2> /tmp/answer.txt
-
-    else
-      # MMC and SDHI-0 are on the same pins
-      whiptail --title "SD Card (SDIO)" --nocancel --menu "Does this board have SD Card (SDIO)?" 0 0 0 \
-	"ch1" "SDHI-1" \
-	"no" "" \
-	2> /tmp/answer.txt
-    fi
 
     hassdhi=$(cat /tmp/answer.txt)
     continue
