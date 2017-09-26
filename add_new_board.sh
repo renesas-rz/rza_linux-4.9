@@ -608,6 +608,44 @@ sed -i "s:serial2:serial${scif}:" arch/arm/boot/dts/r7s72100-${boardname}.dts
 sed -i "s/\* TxD2 \*/\* TxD${scif} \*/" arch/arm/boot/dts/r7s72100-${boardname}.dts
 sed -i "s/\* RxD2 \*/\* TxD${scif} \*/" arch/arm/boot/dts/r7s72100-${boardname}.dts
 
+# CONFIG_DEBUG_LL=y
+#+CONFIG_DEBUG_UART_PHYS=0xe8008000
+# CONFIG_EARLY_PRINTK=y
+
+if [ "$scif" == "0" ] ; then
+  sed -i "s/0xE8008000/0xE8007000/g"  arch/arm/configs/${boardname}_defconfig
+  sed -i "s/0xE8008000/0xE8007000/g"  arch/arm/configs/${boardname}_xip_defconfig
+  sed -i "s/0xE8008000/0xE8007000/g"  arch/arm/boot/dts/r7s72100-${boardname}.dts
+elif [ "$scif" == "1" ] ; then
+  sed -i "s/0xE8008000/0xE8007800/g"  arch/arm/configs/${boardname}_defconfig
+  sed -i "s/0xE8008000/0xE8007800/g"  arch/arm/configs/${boardname}_xip_defconfig
+  sed -i "s/0xE8008000/0xE8007800/g"  arch/arm/boot/dts/r7s72100-${boardname}.dts
+elif [ "$scif" == "2" ] ; then
+  sed -i "s/0xE8008000/0xE8008000/g"  arch/arm/configs/${boardname}_defconfig
+  sed -i "s/0xE8008000/0xE8008000/g"  arch/arm/configs/${boardname}_xip_defconfig
+  sed -i "s/0xE8008000/0xE8008000/g"  arch/arm/boot/dts/r7s72100-${boardname}.dts
+elif [ "$scif" == "3" ] ; then
+  sed -i "s/0xE8008000/0xE8008800/g"  arch/arm/configs/${boardname}_defconfig
+  sed -i "s/0xE8008000/0xE8008800/g"  arch/arm/configs/${boardname}_xip_defconfig
+  sed -i "s/0xE8008000/0xE8008800/g"  arch/arm/boot/dts/r7s72100-${boardname}.dts
+elif [ "$scif" == "4" ] ; then
+  sed -i "s/0xE8008000/0xE8009000/g"  arch/arm/configs/${boardname}_defconfig
+  sed -i "s/0xE8008000/0xE8009000/g"  arch/arm/configs/${boardname}_xip_defconfig
+  sed -i "s/0xE8008000/0xE8009000/g"  arch/arm/boot/dts/r7s72100-${boardname}.dts
+elif [ "$scif" == "5" ] ; then
+  sed -i "s/0xE8008000/0xE8009800/g"  arch/arm/configs/${boardname}_defconfig
+  sed -i "s/0xE8008000/0xE8009800/g"  arch/arm/configs/${boardname}_xip_defconfig
+  sed -i "s/0xE8008000/0xE8009800/g"  arch/arm/boot/dts/r7s72100-${boardname}.dts
+elif [ "$scif" == "6" ] ; then
+  sed -i "s/0xE8008000/0xE800A000/g"  arch/arm/configs/${boardname}_defconfig
+  sed -i "s/0xE8008000/0xE800A000/g"  arch/arm/configs/${boardname}_xip_defconfig
+  sed -i "s/0xE8008000/0xE800A000/g"  arch/arm/boot/dts/r7s72100-${boardname}.dts
+elif [ "$scif" == "7" ] ; then
+  sed -i "s/0xE8008000/0xE800A800/g"  arch/arm/configs/${boardname}_defconfig
+  sed -i "s/0xE8008000/0xE800A800/g"  arch/arm/configs/${boardname}_xip_defconfig
+  sed -i "s/0xE8008000/0xE800A800/g"  arch/arm/boot/dts/r7s72100-${boardname}.dts
+fi
+
 #memory
 sed -i "s:memory@8000000:memory@${memoryaddr}:" arch/arm/boot/dts/r7s72100-${boardname}.dts
 sed -i "s:reg = <0x20000000 0x00A00000>;:reg = <0x${memoryaddr} 0x${memorysize}>;\t \/\* ${memorysizename} of ${memory} \*\/:" arch/arm/boot/dts/r7s72100-${boardname}.dts
