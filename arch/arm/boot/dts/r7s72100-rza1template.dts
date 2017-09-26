@@ -252,8 +252,6 @@
 			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA22 */
 			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA23 */
 
-			<RZA1_PINMUX(?, ?, ?)>;	/* LCD0_CLK */
-
 			/* TCON pins (some may not be used) */
 			//<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_TCON0 */
 			//<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_TCON1 */
@@ -262,6 +260,8 @@
 			<RZA1_PINMUX(?, ?, ?)>,		/* LCD0_TCON4 */
 			//<RZA1_PINMUX(?, ?,  ?)>,	/* LCD0_TCON5 */
 			//<RZA1_PINMUX(?, ?,  ?)>,	/* LCD0_TCON6 */
+
+			<RZA1_PINMUX(?, ?, ?)>;	/* LCD0_CLK */
 	};
 
 	/* VDC5 LCD ch 0 LVDS Pins */
