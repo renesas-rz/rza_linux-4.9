@@ -214,6 +214,13 @@
 	};
 #endif
 
+#if 0 /* IRQ pin setup example */
+	/* IRQ1 (for Touchscreen) */
+	irq1_pins: irq1 {
+		pinmux = <RZA1_PINMUX(4, 9, 8)>;	/* IRQ1 */
+	};
+#endif
+
 	/* VDC5 LCD ch 0 Pins */
 	vdc50_pins: vdc50 {
 		pinmux =
@@ -379,7 +386,10 @@
 	ft5x06_ts@38 {
 		compatible = "focaltech,ft5x06";
 		reg = <0x38>; /* I2C address = 0x38 */
-		interrupts = <GIC_SPI (33-32) IRQ_TYPE_LEVEL_HIGH>; /* IRQ1 */
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&irq1_pins>;
+		interrupts = <GIC_SPI (33-32) IRQ_TYPE_LEVEL_LOW>; /* IRQ1 */
 
 		touchscreen-size-x = <800>;
 		touchscreen-size-y = <480>;

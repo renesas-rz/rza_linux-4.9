@@ -16,24 +16,6 @@ static int __init rza1template_init_early(void)
 	r7s72100_pfc_pin_assign(P1_15, ALT1, DIIO_PBDC_DIS);	/* AD7 */
 #endif
 
-#if 0 /* Example of changing interrupt trigger type (edge/level) */
-	/* Set up IRQ for touchscreen */
-	{
-		/* Manually set IRQ1 for 'low level' trigger in Interrupt Control Register 1 */
-		enum { LOW_LEVEL=0, FALLING_EDGE, RISING_EDGE, BOTH_EDGE };
-		#define TOUCHSCREEN_IRQ 1
-
-		void __iomem *irc1 = ioremap_nocache(0xfcfef802, 0x2);
-		u16 val;
-		val = readw(irc1);
-		val &= ~(0x3 << (TOUCHSCREEN_IRQ * 2));
-		val |= LOW_LEVEL;
-		writew(val, irc1);
-		iounmap(irc1);
-		r7s72100_pfc_pin_assign(P4_9, ALT8, DIIO_PBDC_DIS);  /* IRQ1 */
-	}
-#endif
-
 	return 0;
 }
 /* HINT: When you declare a function with early_initcall, that function
