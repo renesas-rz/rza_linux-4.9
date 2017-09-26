@@ -1,0 +1,341 @@
+/*
+ * Device Tree Source for the GRPEACH board
+ *
+ * Copyright (C) 2017 Renesas Electronics
+ *
+ * This file is dual-licensed: you can use it either under the terms
+ * of the GPL or the X11 license, at your option. Note that this dual
+ * licensing only applies to this file, and not this project as a
+ * whole.
+ *
+ *  a) This file is free software; you can redistribute it and/or
+ *     modify it under the terms of the GNU General Public License as
+ *     published by the Free Software Foundation; either version 2 of the
+ *     License, or (at your option) any later version.
+ *
+ *     This file is distributed in the hope that it will be useful,
+ *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *     GNU General Public License for more details.
+ *
+ * Or, alternatively,
+ *
+ *  b) Permission is hereby granted, free of charge, to any person
+ *     obtaining a copy of this software and associated documentation
+ *     files (the "Software"), to deal in the Software without
+ *     restriction, including without limitation the rights to use,
+ *     copy, modify, merge, publish, distribute, sublicense, and/or
+ *     sell copies of the Software, and to permit persons to whom the
+ *     Software is furnished to do so, subject to the following
+ *     conditions:
+ *
+ *     The above copyright notice and this permission notice shall be
+ *     included in all copies or substantial portions of the Software.
+ *
+ *     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ *     EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ *     OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ *     NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ *     HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ *     WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ *     FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ *     OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+
+/dts-v1/;
+#include "r7s72100.dtsi"
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/pinctrl/r7s72100-pinctrl.h>
+
+/ {
+	model = "GRPEACH";
+	compatible = "renesas,grpeach", "renesas,r7s72100";
+
+	aliases {
+		/* It is recommended to always map the serial console as /dev/ttySC0
+		 * in you system regardless of the actual SCIF channel used */
+		serial0 = &scif2;
+	};
+
+	chosen {
+		/* Keep extra spaces at the end in case you want to add additional command line options from u-boot */
+		bootargs = "ignore_loglevel earlyprintk earlycon=scif,0xE8008000 rootfstype=axfs root=/dev/null rootflags=physaddr=0x18800000     ";
+		stdout-path = "serial0:115200n8";
+	};
+
+	memory@20000000 {
+		device_type = "memory";
+		reg = <0x20000000 0x00A00000>;	 /* 10Mbyte of Internal RAM only */
+	};
+
+	lbsc {
+		#address-cells = <1>;
+		#size-cells = <1>;
+	};
+
+ /* LED (GPIO) as an example */
+	leds {
+		status = "okay";
+		compatible = "gpio-leds";
+
+		led_r {
+			gpios = <&port6 13 GPIO_ACTIVE_HIGH>;
+		};
+		led_g {
+			gpios = <&port6 14 GPIO_ACTIVE_HIGH>;
+		};
+		led_b {
+			gpios = <&port6 15 GPIO_ACTIVE_HIGH>;
+		};
+	};
+
+
+#if 0
+	/* File System in XIP QSPI (for squashfs) */
+	/* Remember, we'll be in QSPI XIP mode at this point */
+	/* Requires CONFIG_MTD_ROM=y */
+	qspi@18000000 {
+		compatible = "mtd-rom";
+		probe-type = "map_rom";
+		reg = <0x18000000 0x4000000>;	/* 64 MB*/
+		bank-width = <4>;
+		device-width = <1>;
+
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		partition@800000 {
+			label ="user";
+			reg = <0x0800000 0x800000>; /* 8MB @ 0x18800000 */
+			read-only;
+		};
+	};
+#endif
+};
+
+/* EXTAL (remove if not populated) */
+&extal_clk {
+	clock-frequency = <13330000>;	/* 13.33MHz */
+};
+
+/* USB_X1 (remove if not populated) */
+&usb_x1_clk {
+	clock-frequency = <48000000>;	/* 48MHz */
+};
+
+/* Define your pin settings here
+ *
+ * Please refer to tables 54.xx in the Hardware Manual for the correct
+ * 'Alternative Mode' number for each pin. Caution: Alt Mode numbers
+ * vary per pin and per device tyep (RZ/A1L,A1M,A1H)
+ *
+ * Syntax:
+ *    pinmux = <RZA1_PINMUX(Port, Pin, Alt Mode)>
+ *
+ * Example:
+ *    pinmux = <RZA1_PINMUX(3, 0, 6)>   /* P3_0 = TxD2 */
+/*
+ */
+&pinctrl {
+
+	/* Serial Console */
+	scif2_pins: serial2 {
+		pinmux = <RZA1_PINMUX(6, 3, 7)>,	/* TxD2 */
+			 <RZA1_PINMUX(6, 2, 7)>;	/* TxD2 */
+	};
+
+	/* Ethernet Pins */
+	ether_pins: ether {
+		pinmux = <RZA1_PINMUX(1, 14, 4)>,	/* ET_COL   */
+			 <RZA1_PINMUX(5, 9, 2)>,	/* ET_MDC   */
+			 <RZA1_PINMUX(3, 3, 2)>,	/* ET_MDIO  */
+			 <RZA1_PINMUX(3, 4, 2)>,	/* ET_RXCLK */
+			 <RZA1_PINMUX(3, 5, 2)>,	/* ET_RXER  */
+			 <RZA1_PINMUX(3, 6, 2)>,	/* ET_RXDV  */
+			 <RZA1_PINMUX(3, 0, 2)>,	/* ET_TXCLK */
+			 <RZA1_PINMUX(10, 1, 4)>,	/* ET_TXER  */
+			 <RZA1_PINMUX(10, 2, 4)>,	/* ET_TXEN  */
+			 <RZA1_PINMUX(10, 3, 4)>,	/* ET_CRS   */
+			 <RZA1_PINMUX(10, 4, 4)>,	/* ET_TXD0  */
+			 <RZA1_PINMUX(10, 5, 4)>,	/* ET_TXD1  */
+			 <RZA1_PINMUX(10, 6, 4)>,	/* ET_TXD2  */
+			 <RZA1_PINMUX(10, 7, 4)>,	/* ET_TXD3  */
+			 <RZA1_PINMUX(10, 8, 4)>,	/* ET_RXD0  */
+			 <RZA1_PINMUX(10, 9, 4)>,	/* ET_RXD1  */
+			 <RZA1_PINMUX(10, 10, 4)>,	/* ET_RXD2  */
+			 <RZA1_PINMUX(10, 11, 4)>;	/* ET_RXD3  */
+	};
+
+
+	/* RIIC ch0 Pins */
+	i2c1_pins: i2c0 {
+		pinmux = <RZA1_PINMUX(1, 2, 1)>,	/* RIIC1SCL */
+			 <RZA1_PINMUX(1, 3, 1)>;	/* RIIC1SDA */
+	};
+
+	/* VDC5 LCD ch 0 LVDS Pins */
+	vdc50_pins: vdc50 {
+		pinmux = <RZA1_PINMUX(5, 0, 1)>,	/* TXCLKOUTP */
+			 <RZA1_PINMUX(5, 1, 1)>,	/* TXCLKOUTM */
+			 <RZA1_PINMUX(5, 2, 1)>,	/* TXOUT2P */
+			 <RZA1_PINMUX(5, 3, 1)>,	/* TXOUT2M */
+			 <RZA1_PINMUX(5, 4, 1)>,	/* TXOUT1P */
+			 <RZA1_PINMUX(5, 5, 1)>,	/* TXOUT1M */
+			 <RZA1_PINMUX(5, 6, 1)>,	/* TXOUT0P */
+			 <RZA1_PINMUX(5, 7, 1)>;	/* TXOUT0M */
+	};
+
+};
+
+/* High resolution System tick timers */
+&ostm0 {
+	status = "okay";
+};
+
+&ostm1 {
+	status = "okay";
+};
+
+/* The MTU2 system timer is not really needed if you are using the higher
+ * resolution OSTM timer */
+# if 0
+&mtu2 {
+	status = "okay";
+};
+#endif
+
+
+/* Serial Console */
+&scif2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&scif2_pins>;
+	status = "okay";
+};
+
+/* Ethernet */
+&ether {
+	pinctrl-names = "default";
+	pinctrl-0 = <&ether_pins>;
+	status = "okay";
+	renesas,no-ether-link;
+	phy-handle = <&phy0>;
+	phy0: ethernet-phy@0 {
+		reg = <0>;
+	};
+};
+
+/* USB Host ch0 */
+&usbhost0 {
+	status = "okay";
+	xtal-48mhz;
+};
+
+/* USB Host ch1 */
+&usbhost1 {
+	/* NOTE: You MUST enable USB ch0 (host or device) first because
+	   there are some shared registers bits in USB0 that USB1 needs. */
+	status = "okay";
+	xtal-48mhz;
+};
+
+/* RIIC1 (I2C Touchscreen example) */
+#if 0
+&i2c0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c1_pins>;
+	status = "okay";
+	clock-frequency = <400000>;
+
+	/* Focaltech FT5x06 Capacitive Touch Panel Controller */
+	ft5x06_ts@38 {
+		compatible = "focaltech,ft5x06";
+		reg = <0x38>; /* I2C address = 0x38 */
+		interrupts = <GIC_SPI (33-32) IRQ_TYPE_LEVEL_HIGH>; /* IRQ1 */
+
+		touchscreen-size-x = <800>;
+		touchscreen-size-y = <480>;
+
+		/* The touchscreen on the RSK LCD is backwards for some reason */
+		touchscreen-inverted-x;
+		touchscreen-inverted-y;
+	};
+};
+#endif
+
+/* LCD */
+#define VDC5_BPP 16 /* 16bpp or 32bpp */
+#define VDC5_FBSIZE (800*480*VDC5_BPP/8)
+#define VDC5_FB_ADDR 0	/* 0 = allocate memory at probe (don't use when using SDRAM) */
+
+/* LVDS Panel: AM800480RBTMQW-TA3H| 800x480 (WVGA), 7", LVDS, 16bpp */
+&vdc50 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&vdc50_pins>;
+
+	display = <&display0>;
+	status = "okay";
+
+	/* Set the physical frame buffer address for internal RAM. */
+	fb_phys_addr = <VDC5_FB_ADDR>;
+	fb_phys_size = <VDC5_FBSIZE>;
+
+	panel_name = "AM800480RBTMQW";
+	panel_pixel_xres = <800>;	/* panel native resolution */
+	panel_pixel_yres = <480>;	/* panel native resolution */
+
+
+	/* See 'drivers/video/fbdev/renesas/vdc5fb.h' for valid choices
+	* for panel_icksel, panel_ocksel, and out_format */
+	panel_icksel = <0>;	/* (don't care when lvds=1) */
+	panel_ocksel = <2>;	/* 2=OCKSEL_PLL_DIV7 (Peripheral clock 1) */
+	out_format = <0>;	/* 0=OUT_FORMAT_RGB888 */
+	use_lvds = <1>;		/* Set to 0 or 1 */
+
+	/* Define how the TCON pins going to be used */
+	/* From file drivers/video/fbdev/renesas/vdc5fb.h */
+#define TCON_SEL_STVA           0       /* STVA/VS (VSYNC) */
+#define TCON_SEL_STVB           1       /* STVB/VE (Vertical Enable)*/
+#define TCON_SEL_STH            2       /* STH/SP/HS (HSYNC) */
+#define TCON_SEL_STB            3       /* STB/LP/HE (Horizontal Enable) */
+#define TCON_SEL_CPV            4       /* CPV/GCK (Gate clock signal) */
+#define TCON_SEL_POLA           5       /* POLA (VCOM voltage polarity control signal) */
+#define TCON_SEL_POLB           6       /* POLB (VCOM voltage polarity control signal) */
+#define TCON_SEL_DE             7       /* DE (Data Enable) */
+#define TCON_SEL_UNUSED         0xff    /* pin not used */
+
+	tcon_sel = <
+		0	/* TCON0: VSYNC		(for LVDS, VS must be TCON0) */
+		0xff	/* TCON1: 		(not connected to LVDS circuit) */
+		2	/* TCON2: HSYNC		(for LVDS, HS must be TCON2) */
+		7	/* TCON3: DATA ENABLE	(for LVDS, DE must be TCON3) */
+		0xff	/* TCON4: 		(not connected to LVDS circuit) */
+		0xff	/* TCON5: 		(not connected to LVDS circuit) */
+		0xff	/* TCON6: 		(not connected to LVDS circuit) */
+		>;
+
+	display0: display0 {
+		bits-per-pixel = <VDC5_BPP>;
+		bus-width = <24>;
+
+		display-timings {
+			native-mode = <&timing0>;
+			timing0: timing0 {
+				clock-frequency = <71100000>; /* min:64.3MHz, typ:71.1MHz, max:82MHz */
+				hactive = <800>;
+				vactive = <480>;
+				hback-porch = <128>;
+				hfront-porch = <92>;
+				vback-porch = <35>;
+				vfront-porch = <5>;
+				hsync-len = <36>; /* max */
+				vsync-len = <5>; /* max */
+				hsync-active = <1>; /* HIGH */
+				vsync-active = <1>; /* HIGH */
+				de-active = <0>; /* LOW */
+				pixelclk-active = <0>; /* ??? */
+			};
+		};
+	};
+}; /* LCD end */
+
