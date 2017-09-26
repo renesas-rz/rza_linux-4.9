@@ -25,6 +25,7 @@ obj-$(CONFIG_ARCH_R7S72100)	+= setup-r7s72100.o
 obj-$(CONFIG_MACH_RSKRZA1)	+= board-rskrza1.o
 obj-$(CONFIG_MACH_GENMAI)	+= board-genmai.o
 obj-$(CONFIG_MACH_GRPEACH)	+= board-grpeach.o
+obj-$(CONFIG_MACH_YLCDRZA1H)	+= board-ylcdrza1h.o
 
 #--------------------------------------------
 # Custom RZ/A Boards

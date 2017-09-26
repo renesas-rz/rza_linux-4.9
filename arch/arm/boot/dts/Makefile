@@ -7,6 +7,7 @@ ifeq ($(CONFIG_OF),y)
 #--------------------------------------------
 dtb-y += r7s72100-rskrza1_testing.dtb
 dtb-y += r7s72100-grpeach.dtb
+dtb-y += r7s72100-ylcdrza1h.dtb
 
 #--------------------------------------------
 # Custom RZ/A Boards

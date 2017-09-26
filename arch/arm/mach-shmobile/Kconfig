@@ -119,6 +119,9 @@ config MACH_GENMAI
 config MACH_GRPEACH
 	bool "GR-PEACH board"
 
+config MACH_YLCDRZA1H
+	bool "YLCDRZA1H board"
+
 #--------------------------------------------
 # Custom RZ/A Boards
 # Enter your custom board files below this line (to avoid merge conflicts)
