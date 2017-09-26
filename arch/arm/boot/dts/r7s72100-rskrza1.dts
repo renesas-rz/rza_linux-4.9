@@ -128,6 +128,11 @@
 			 <RZA1_PINMUX(1, 1, 1)>;	/* RIIC0SDA */
 	};
 
+	/* IRQ1 (Touchscreen) */
+	irq1_pins: irq1 {
+		pinmux = <RZA1_PINMUX(4, 9, 8)>;	/* IRQ1 */
+	};
+
 	/* RIIC ch3 (Port Expander, EEPROM (MAC Addr), Audio Codec) */
 	i2c3_pins: i2c3 {
 		pinmux = <RZA1_PINMUX(1, 6, 1)>,	/* RIIC3SCL */
@@ -230,7 +235,10 @@
 	ft5x06_ts@38 {
 		compatible = "focaltech,ft5x06";
 		reg = <0x38>;
-		interrupts = <GIC_SPI (33-32) IRQ_TYPE_LEVEL_HIGH>; /* IRQ1 */
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&irq1_pins>;
+		interrupts = <GIC_SPI (33-32) IRQ_TYPE_LEVEL_LOW>; /* IRQ1 */
 
 		touchscreen-size-x = <800>;
 		touchscreen-size-y = <480>;
