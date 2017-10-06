@@ -274,7 +274,7 @@
 	/* See 'drivers/video/fbdev/renesas/vdc5fb.h' for valid choices
 	* for panel_icksel, panel_ocksel, and out_format */
 	panel_icksel = <0>;	/* (don't care when lvds=1) */
-	panel_ocksel = <2>;	/* 2=OCKSEL_PLL_DIV7 (Peripheral clock 1) */
+	panel_ocksel = <2>;	/* 2=OCKSEL_PLL_DIV7 (LVDS PLL clock divided by 7) */
 	out_format = <0>;	/* 0=OUT_FORMAT_RGB888 */
 	use_lvds = <1>;		/* Set to 0 or 1 */
 
