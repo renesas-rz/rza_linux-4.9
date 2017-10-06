@@ -30,7 +30,9 @@
 		spi3 = &spi3;
 		spi4 = &spi4;
 		spi5 = &spibsc0;
+#ifndef CONFIG_RZA1L
 		spi6 = &spibsc1;
+#endif
 	};
 
 	clocks {
@@ -211,14 +213,21 @@
 	};
 
 	pinctrl: pin-controller@fcfe3000 {
+#ifdef CONFIG_RZA1L
+		compatible = "renesas,r7s72102-ports";
+#else
 		compatible = "renesas,r7s72100-ports";
-
+#endif
 		reg = <0xfcfe3000 0x4230>;
 
 		port0: gpio-0 {
 			gpio-controller;
 			#gpio-cells = <2>;
+#ifdef CONFIG_RZA1L
+			gpio-ranges = <&pinctrl 0 0 4>;
+#else
 			gpio-ranges = <&pinctrl 0 0 6>;
+#endif
 		};
 
 		port1: gpio-1 {
@@ -230,7 +239,11 @@
 		port2: gpio-2 {
 			gpio-controller;
 			#gpio-cells = <2>;
+#ifdef CONFIG_RZA1L
+			gpio-ranges = <&pinctrl 0 32 10>;
+#else
 			gpio-ranges = <&pinctrl 0 32 16>;
+#endif
 		};
 
 		port3: gpio-3 {
@@ -242,13 +255,21 @@
 		port4: gpio-4 {
 			gpio-controller;
 			#gpio-cells = <2>;
+#ifdef CONFIG_RZA1L
+			gpio-ranges = <&pinctrl 0 64 8>;
+#else
 			gpio-ranges = <&pinctrl 0 64 16>;
+#endif
 		};
 
 		port5: gpio-5 {
 			gpio-controller;
 			#gpio-cells = <2>;
+#ifdef CONFIG_RZA1L
+			gpio-ranges = <&pinctrl 0 80 16>;
+#else
 			gpio-ranges = <&pinctrl 0 80 11>;
+#endif
 		};
 
 		port6: gpio-6 {
@@ -260,7 +281,11 @@
 		port7: gpio-7 {
 			gpio-controller;
 			#gpio-cells = <2>;
+#ifdef CONFIG_RZA1L
+			gpio-ranges = <&pinctrl 0 112 12>;
+#else
 			gpio-ranges = <&pinctrl 0 112 16>;
+#endif
 		};
 
 		port8: gpio-8 {
@@ -272,9 +297,14 @@
 		port9: gpio-9 {
 			gpio-controller;
 			#gpio-cells = <2>;
+#ifdef CONFIG_RZA1L
+			gpio-ranges = <&pinctrl 0 144 6>;
+#else
 			gpio-ranges = <&pinctrl 0 144 8>;
+#endif
 		};
 
+#ifndef CONFIG_RZA1L
 		port10: gpio-10 {
 			gpio-controller;
 			#gpio-cells = <2>;
@@ -286,6 +316,7 @@
 			#gpio-cells = <2>;
 			gpio-ranges = <&pinctrl 0 176 16>;
 		};
+#endif
 	};
 
 	scif0: serial@e8007000 {
@@ -704,6 +735,7 @@
 		status = "disabled";
 	};
 
+#ifndef CONFIG_RZA1L
 	vdc51: display@fcff9400 {
 		compatible = "renesas,r7s72100-vdc5fb";
 		reg = <0xfcff9400 0x00000700>,
@@ -715,7 +747,7 @@
 		channel = <1>;
 		status = "disabled";
 	};
-
+#endif
 	spibsc0: spi@3fefa000 {
 		compatible = "renesas,r7s72100-spibsc";
 		reg = <0x3fefa000 0x100>;
@@ -725,6 +757,7 @@
 		status = "disabled";
 	};
 
+#ifndef CONFIG_RZA1L
 	spibsc1: spi@3fefb000 {
 		compatible = "renesas,r7s72100-spibsc";
 		reg = <0x3fefb000 0x100>;
@@ -733,4 +766,5 @@
 		#size-cells = <0>;
 		status = "disabled";
 	};
+#endif
 };

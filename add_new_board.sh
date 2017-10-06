@@ -573,12 +573,14 @@ fi
 ####################################
 
 #devicetype
-#if [ "$devicetype" == "RZ_A1H" ] ; then
-# echo ""  # keep default setting 
-#elif [ "$devicetype" == "RZ_A1M" ] ; then
-#
-#elif [ "$devicetype" == "RZ_A1L" ] ; then
-#fi
+if [ "$devicetype" == "RZ_A1H" ] ; then
+  echo ""  # keep default setting
+elif [ "$devicetype" == "RZ_A1M" ] ; then
+  echo ""  # keep default setting
+elif [ "$devicetype" == "RZ_A1L" ] ; then
+  # remove comments from "//#define CONFIG_RZA1L"
+  sed -i 's:\/\/#define CONFIG_RZA1L:#define CONFIG_RZA1L:' arch/arm/boot/dts/r7s72100-${boardname}.dts
+fi
 
 
 #extal
