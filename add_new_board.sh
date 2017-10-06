@@ -417,16 +417,22 @@ source /tmp/whipcmd.txt
 
     if [ "$devicetype" == "RZ_A1L" ] ; then
       whiptail --title "LCD" --nocancel --menu "Does this board have a LCD?" 0 0 0 \
-	"ch0-RGB24" "VDC5 ch0 with 24-bit parallel RGB output" \
-	"ch0-LVDS" "VDC5 ch0 with LVDS output" \
+	"ch0-RGB24" "VDC5 ch0 with 24-bit parallel connection (RGB888)" \
+	"ch0-RGB18" "VDC5 ch0 with 18-bit parallel connection (RGB666)" \
+	"ch0-RGB16" "VDC5 ch0 with 16-bit parallel connection (RGB565)" \
+	"ch0-LVDS" "VDC5 ch0 with LVDS connection" \
 	"no" "" \
 	2> /tmp/answer.txt
     else
       whiptail --title "LCD" --nocancel --menu "Does this board have a LCD?" 0 0 0 \
-	"ch0-RGB24" "VDC5 ch0 with 24-bit parallel RGB output" \
+	"ch0-RGB24" "VDC5 ch0 with 24-bit parallel connection (RGB888)" \
+	"ch0-RGB18" "VDC5 ch0 with 18-bit parallel connection (RGB666)" \
+	"ch0-RGB16" "VDC5 ch0 with 16-bit parallel connection (RGB565)" \
 	"ch0-LVDS" "VDC5 ch0 with LVDS output" \
-	"ch1-RGB24" "VDC5 ch1 with 24-bit parallel RGB output" \
-	"ch1-LVDS" "VDC5 ch1 with LVDS output" \
+	"ch1-RGB24" "VDC5 ch1 with 24-bit parallel connection (RGB888)" \
+	"ch1-RGB18" "VDC5 ch1 with 18-bit parallel connection (RGB666)" \
+	"ch1-RGB16" "VDC5 ch1 with 16-bit parallel connection (RGB565)" \
+	"ch1-LVDS" "VDC5 ch1 with LVDS connection" \
 	"no" "" \
 	2> /tmp/answer.txt
     fi
@@ -544,17 +550,22 @@ LINE=---------------------------------------------
 
 
 # arch/arm/boot/dts/Makefile
-#sed -i "s/---------------------------------------------/---------------------------------------------\ndtb-y += r7s72100-${boardnameboard}.dtb/g" arch/arm/boot/dts/Makefile
-sed -i "s/${LINE}/${LINE}\ndtb-y += r7s72100-${boardname}.dtb/g" arch/arm/boot/dts/Makefile
-
+ALREADY_ADDED=`grep r7s72100-${boardname}.dtb arch/arm/boot/dts/Makefile`
+if [ "$ALREADY_ADDED" == "" ] ; then
+  sed -i "s/${LINE}/${LINE}\ndtb-y += r7s72100-${boardname}.dtb/g" arch/arm/boot/dts/Makefile
+fi
 
 # arch/arm/mach-shmobile/Makefile
-#sed -i "s/---------------------------------------------/---------------------------------------------\nobj-$(CONFIG_MACH_${boardnameupper})	+= board-${boardname}.o/g"  arch/arm/mach-shmobile/Makefile
-sed -i "s/${LINE}/${LINE}\nobj-\$(CONFIG_MACH_${boardnameupper})	+= board-${boardname}.o/g"  arch/arm/mach-shmobile/Makefile
+ALREADY_ADDED=`grep CONFIG_MACH_${boardnameupper} arch/arm/mach-shmobile/Makefile`
+if [ "$ALREADY_ADDED" == "" ] ; then
+  sed -i "s/${LINE}/${LINE}\nobj-\$(CONFIG_MACH_${boardnameupper})	+= board-${boardname}.o/g"  arch/arm/mach-shmobile/Makefile
+fi
 
 # arch/arm/mach-shmobile/Kconfig
-sed -i "s/${LINE}/${LINE}\nconfig MACH_${boardnameupper}\n\tbool \"${boardnameupper} board\"\n/g"  arch/arm/mach-shmobile/Kconfig
-
+ALREADY_ADDED=`grep MACH_${boardnameupper} arch/arm/mach-shmobile/Kconfig`
+if [ "$ALREADY_ADDED" == "" ] ; then
+  sed -i "s/${LINE}/${LINE}\nconfig MACH_${boardnameupper}\n\tbool \"${boardnameupper} board\"\n/g"  arch/arm/mach-shmobile/Kconfig
+fi
 
 
 ####################################
@@ -571,7 +582,7 @@ sed -i "s/${LINE}/${LINE}\nconfig MACH_${boardnameupper}\n\tbool \"${boardnameup
 
 
 #extal
-sed -i "s/13.33MHz/$extal/" arch/arm/boot/dts/r7s72100-${boardname}.dts 
+sed -i "s/13.33MHz/$extal/" arch/arm/boot/dts/r7s72100-${boardname}.dts
 sed -i "s/13330000/$extalspeed/" arch/arm/boot/dts/r7s72100-${boardname}.dts
 
 if [ "$extal" == "none" ] ; then
@@ -709,8 +720,8 @@ fi
 #haslcd
 if [ "$haslcd" == "no" ] ; then
 
-  # Remove next 42 lines starting with the line "/* VDC5 LCD ch 0 Pins */"
-  sed -i -e '/\/\* VDC5 LCD ch 0 Pins \*\//,+42d' arch/arm/boot/dts/r7s72100-${boardname}.dts
+  # Remove next 41 lines starting with the line "/* VDC5 LCD ch 0 Pins */"
+  sed -i -e '/\/\* VDC5 LCD ch 0 Pins \*\//,+41d' arch/arm/boot/dts/r7s72100-${boardname}.dts
 
   # Remove next 11 lines starting with the line "/* VDC5 LCD ch 0 LVDS Pins */"
   sed -i -e '/\/\* VDC5 LCD ch 0 LVDS Pins \*\//,+11d' arch/arm/boot/dts/r7s72100-${boardname}.dts
@@ -723,16 +734,54 @@ if [ "$haslcd" == "no" ] ; then
 
 fi
 
-# RGB24
-if [ "${haslcd:4}" == "RGB24" ] ; then
-  # Remove next 11 lines starting with the line "/* VDC5 LCD ch 0 LVDS Pins */"
-  sed -i -e '/\/\* VDC5 LCD ch 0 LVDS Pins \*\//,+11d' arch/arm/boot/dts/r7s72100-${boardname}.dts
+# RGB24, RGB18, RGB16
+if [ "${haslcd:4:3}" == "RGB" ] ; then
+  # Remove next 1 lines starting with the line "/* TCON for Parallel RGB */"
+  sed -i -e '/\/\* TCON for Parallel RGB \*\//d' arch/arm/boot/dts/r7s72100-${boardname}.dts
+
+  # Remove next 13 lines starting with the line "/* TCON for LVDS */"
+  sed -i -e '/\/\* TCON for LVDS \*\//,+13d' arch/arm/boot/dts/r7s72100-${boardname}.dts
+fi
+# RGB18
+if [ "${haslcd:4}" == "RGB18" ] ; then
+  #out_format = <1>
+  sed -i -e 's/out_format = <0>/out_format = <1>/' arch/arm/boot/dts/r7s72100-${boardname}.dts
+
+  # remove unnecessary pins
+  sed -i -e '/_DATA18 /,+1d' arch/arm/boot/dts/r7s72100-${boardname}.dts
+  sed -i -e '/_DATA19 /,+1d' arch/arm/boot/dts/r7s72100-${boardname}.dts
+  sed -i -e '/_DATA20 /,+1d' arch/arm/boot/dts/r7s72100-${boardname}.dts
+  sed -i -e '/_DATA21 /,+1d' arch/arm/boot/dts/r7s72100-${boardname}.dts
+  sed -i -e '/_DATA22 /,+1d' arch/arm/boot/dts/r7s72100-${boardname}.dts
+  sed -i -e '/_DATA23 /,+1d' arch/arm/boot/dts/r7s72100-${boardname}.dts
+fi
+# RGB16
+if [ "${haslcd:4}" == "RGB16" ] ; then
+  #out_format = <2>
+  sed -i -e 's/out_format = <0>/out_format = <2>/' arch/arm/boot/dts/r7s72100-${boardname}.dts
+
+  # remove unnecessary pins
+  sed -i -e '/_DATA16 /,+1d' arch/arm/boot/dts/r7s72100-${boardname}.dts
+  sed -i -e '/_DATA17 /,+1d' arch/arm/boot/dts/r7s72100-${boardname}.dts
+  sed -i -e '/_DATA18 /,+1d' arch/arm/boot/dts/r7s72100-${boardname}.dts
+  sed -i -e '/_DATA19 /,+1d' arch/arm/boot/dts/r7s72100-${boardname}.dts
+  sed -i -e '/_DATA20 /,+1d' arch/arm/boot/dts/r7s72100-${boardname}.dts
+  sed -i -e '/_DATA21 /,+1d' arch/arm/boot/dts/r7s72100-${boardname}.dts
+  sed -i -e '/_DATA22 /,+1d' arch/arm/boot/dts/r7s72100-${boardname}.dts
+  sed -i -e '/_DATA23 /,+1d' arch/arm/boot/dts/r7s72100-${boardname}.dts
 fi
 
 # LVDS
 if [ "${haslcd:4}" == "LVDS" ] ; then
-  # Remove next 42 lines starting with the line "/* VDC5 LCD ch 0 Pins */"
-  sed -i -e '/\/\* VDC5 LCD ch 0 Pins \*\//,+42d' arch/arm/boot/dts/r7s72100-${boardname}.dts
+  # Remove next 11 lines starting with the line "/* TCON for Parallel RGB */"
+  sed -i -e '/\/\* TCON for Parallel RGB \*\//,+11d' arch/arm/boot/dts/r7s72100-${boardname}.dts
+
+  # Remove line    #endif /* end TCON */
+  #sed -i -e '/\/\* end TCON \*\//,+1d' arch/arm/boot/dts/r7s72100-${boardname}.dts
+  sed -i '/\/\* end TCON \*\//d' arch/arm/boot/dts/r7s72100-${boardname}.dts
+
+  # Remove next 41 lines starting with the line "/* VDC5 LCD ch 0 Pins */"
+  sed -i -e '/\/\* VDC5 LCD ch 0 Pins \*\//,+41d' arch/arm/boot/dts/r7s72100-${boardname}.dts
 
   #use_lvds = <1>
   sed -i "s/use_lvds = <0>/use_lvds = <1>/g" arch/arm/boot/dts/r7s72100-${boardname}.dts
@@ -741,7 +790,7 @@ if [ "${haslcd:4}" == "LVDS" ] ; then
   sed -i -e "s/panel_icksel =.*/panel_icksel = <0>;	\/\* (don't care when lvds=1) \*\//" arch/arm/boot/dts/r7s72100-${boardname}.dts
 
   # panel_ocksel = <2>;	/* 2=OCKSEL_PLL_DIV7 (Peripheral clock 1) */
-  sed -i -e "s/panel_ocksel =.*/panel_ocksel = <2>;	\/\* 2=OCKSEL_PLL_DIV7 (Peripheral clock 1) \*\//" arch/arm/boot/dts/r7s72100-${boardname}.dts
+  sed -i -e "s/panel_ocksel =.*/panel_ocksel = <2>;	\/\* 2=OCKSEL_PLL_DIV7 (LVDS PLL clock divided by 7) \*\//" arch/arm/boot/dts/r7s72100-${boardname}.dts
 fi
 
 if [ "${haslcd:0:3}" == "ch1" ] ; then

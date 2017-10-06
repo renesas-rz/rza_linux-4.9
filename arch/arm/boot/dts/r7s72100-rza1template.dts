@@ -224,7 +224,6 @@
 	/* VDC5 LCD ch 0 Pins */
 	vdc50_pins: vdc50 {
 		pinmux =
-			/* LCD0_DATA0 to LCD0_DATA7 */
 			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA0 */
 			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA1 */
 			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA2 */
@@ -234,7 +233,6 @@
 			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA6 */
 			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA7 */
 
-			/* LCD0_DATA8 to LCD0_DATA23 */
 			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA8 */
 			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA9 */
 			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA10 */
@@ -243,6 +241,7 @@
 			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA13 */
 			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA14 */
 			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA15 */
+
 			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA16 */
 			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA17 */
 			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA18 */
@@ -427,7 +426,7 @@
 	* for panel_icksel, panel_ocksel, and out_format */
 	panel_icksel = <3>;	/* 3=ICKSEL_P1CLK (Peripheral clock 1) */
 	panel_ocksel = <0>;	/* (don't care when lvds=0 ) */
-	out_format = <0>;	/* 0=OUT_FORMAT_RGB888 */
+	out_format = <0>;	/* 0=RGB888, 1=RGB666, 2=RGB565 */
 	use_lvds = <0>;		/* Set to 0 or 1 */
 
 	/* Define how the TCON pins going to be used */
@@ -441,6 +440,8 @@
 	 * 6 = POLB (VCOM voltage polarity control signal)
 	 * 7 = DE (Data Enable)
 	 * 0xff = pin not used */
+
+#if 1 /* TCON for Parallel RGB */
 	tcon_sel = <
 		0xff	/* TCON0: */
 		0xff	/* TCON1: */
@@ -451,7 +452,7 @@
 		0xff	/* TCON6: */
 		>;
 
-#if 0 /* TCON for LVDS */
+#else /* TCON for LVDS */
 	/* For LVDS, the physical TCON pins are not used, but they still need to be
 	 * configured so they can internally be multiplexed in the LVDS stream. */
 	tcon_sel = <
@@ -463,7 +464,8 @@
 		0xff	/* TCON5: 		(not connected to LVDS circuit) */
 		0xff	/* TCON6: 		(not connected to LVDS circuit) */
 		>;
-#endif
+#endif /* end TCON */
+
 
 	display0: display0 {
 		bits-per-pixel = <VDC5_BPP>;
@@ -472,7 +474,7 @@
 		display-timings {
 			native-mode = <&timing0>;
 			timing0: timing0 {
-				clock-frequency = <33325000>; /* P1 clk / 2 */
+				clock-frequency = <33325000>; /* At run time, will calculate as close to this speed without going over. */
 				/*clock-frequency = <71100000>;*/ /* min:64.3MHz, typ:71.1MHz, max:82MHz */
 				hactive = <800>;
 				vactive = <480>;
