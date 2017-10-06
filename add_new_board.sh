@@ -2,7 +2,7 @@
 
 
 # first make sure we are running from the base of the kernel directory
-if [ ! -e .get_maintainer.ignore ] ; then
+if [ ! -e MAINTAINERS  ] ; then
   echo "ERROR: You must run this script from the base of the linux-4.9 directory"
   echo "press enter to continue"
   read dummy
@@ -44,7 +44,7 @@ usb1=no
 
 while [ "1" == "1" ]
 do
-	echo 'whiptail --title "Add new BSP Board"  --noitem --menu "Make changes the items below as needed, then press create.\nYou may use ESC+ESC to cancel." 0 0 0 \' > /tmp/whipcmd.txt
+	echo 'whiptail --title "Add new BSP Board"  --noitem --menu "Make changes the items below as needed, then select Create BSP.\nYou may use ESC+ESC to cancel." 0 0 0 \' > /tmp/whipcmd.txt
 	echo '"         Board Name: $boardname" "" \' >> /tmp/whipcmd.txt
 	echo '"       Company Name: $companyname" "" \' >> /tmp/whipcmd.txt
 	echo '"        Device Type: $devicetype" "" \' >> /tmp/whipcmd.txt
@@ -299,7 +299,7 @@ source /tmp/whipcmd.txt
 	2> /tmp/answer.txt
 
     extal=$(cat /tmp/answer.txt)
-    
+
   if [ "$extal" == "10MHz" ] ; then
     p1clockspeed=50000000
     extalspeed=10000000
