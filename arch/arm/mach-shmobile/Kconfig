@@ -123,6 +123,9 @@ config MACH_GRPEACH
 config MACH_YLCDRZA1H
 	bool "YLCDRZA1H board"
 
+config MACH_STREAMIT
+	bool "Stream it! board"
+
 #--------------------------------------------
 # Custom RZ/A Boards
 # Enter your custom board files below this line (to avoid merge conflicts)
