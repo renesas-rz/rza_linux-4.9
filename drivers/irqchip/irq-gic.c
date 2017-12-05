@@ -315,20 +315,20 @@ static int gic_set_type(struct irq_data *d, unsigned int type)
 		val &= ~(0x3 << ((gicirq - 32) * 2));	// clear bits
 		switch (type) {
 			case IRQ_TYPE_EDGE_RISING:
-				val |= RISING_EDGE;
+				val |= RISING_EDGE << ((gicirq - 32) * 2);
 				break;
 			case IRQ_TYPE_EDGE_FALLING:
-				val |= FALLING_EDGE;
+				val |= FALLING_EDGE << ((gicirq - 32) * 2);
 				break;
 			case IRQ_TYPE_EDGE_BOTH:
-				val |= BOTH_EDGE;
+				val |= BOTH_EDGE << ((gicirq - 32) * 2);
 				break;
 			case IRQ_TYPE_LEVEL_LOW:
-				val |= LOW_LEVEL;
+				val |= LOW_LEVEL << ((gicirq - 32) * 2);
 				break;
 			case IRQ_TYPE_LEVEL_HIGH:
 				printk("Warning: RZ/A1 does not support IRQ_TYPE_LEVEL_HIGH for IRQ0-IRQ7\n");
-				val |= RISING_EDGE;
+				val |= RISING_EDGE << ((gicirq - 32) * 2);
 				break;
 		}
 		writew(val, irc1);
