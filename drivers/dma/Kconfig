@@ -458,6 +458,12 @@ config S3C24XX_DMAC
 	  configured for different peripherals like audio, UART, SPI.
 	  The DMA controller can transfer data from memory to peripheral,
 	  periphal to memory, periphal to periphal and memory to memory.
+config RZA_DMA
+	tristate "Renesas RZ/A DMAC support"
+	depends on ARCH_R7S72100
+	select DMA_ENGINE
+	help
+	  Enable support for the Renesas RZA DMA controllers.
 
 config TXX9_DMAC
 	tristate "Toshiba TXx9 SoC DMA support"
