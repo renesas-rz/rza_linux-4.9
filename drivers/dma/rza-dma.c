@@ -3,19 +3,15 @@
  *
  * base is drivers/dma/imx-dma.c
  *
- * Copyright (C) 2009-2013 Renesas Solutions Corp.
+ * Copyright (C) 2009-2017 Renesas Electronics
  * Copyright 2012 Javier Martin, Vista Silicon <javier.martin@vista-silicon.com>
  * Copyright (C) 2011-2012 Guennadi Liakhovetski <g.liakhovetski@gmx.de>
  * Copyright 2010 Sascha Hauer, Pengutronix <s.hauer@pengutronix.de>
  * Copyright (C) 2009 Nobuhiro Iwamatsu <iwamatsu.nobuhiro@renesas.com>
  * Copyright (C) 2007 Freescale Semiconductor, Inc. All rights reserved.
  *
- * The code contained herein is licensed under the GNU General Public
- * License. You may obtain a copy of the GNU General Public License
- * Version 2 or later at the following locations:
+ * SPDX-License-Identifier: GPL-2.0
  *
- * http://www.opensource.org/licenses/gpl-license.html
- * http://www.gnu.org/copyleft/gpl.html
  */
 #define	END_DMA_WITH_LE		0	/* 1: LE=1, 0: LV=0 */
 #define	IRQ_EACH_TX_WITH_DEM	1	/* 1: DEM=0, 0: DIM=0 */
@@ -32,12 +28,99 @@
 #include <linux/clk.h>
 #include <linux/dmaengine.h>
 #include <linux/module.h>
+#include <linux/of.h>
+#include <linux/of_dma.h>
 
 #include <asm/irq.h>
-#include <linux/platform_data/dma-rza1.h>
 
 #include "dmaengine.h"
 #define RZA1DMA_MAX_CHAN_DESCRIPTORS	16
+
+#include <linux/scatterlist.h>
+#include <linux/device.h>
+#include <linux/dmaengine.h>
+
+
+/* Call the callback function from within a thread instead of a standard tasklet.
+ * The reason is because of upstream commit
+ *	52ad9a8e854c ("mmc: host: tmio: ensure end of DMA and SD access are in sync")
+ * This commit now uses a wait_for_completion in the DMA callback which when called in
+ * the contex of a tasklet causes a "BUG: scheduling while atomic".
+ * Therefore we have no choice but to use a threaded IRQ for callbacks like the
+ * R-Car DMA driver.
+ */
+#define THREADED_CALLBACK
+
+static void rza1dma_tasklet(unsigned long data);	//asdf
+
+/* DMA slave IDs */
+enum {
+	RZA1DMA_SLAVE_PCM_MEM_SSI0 = 1,	/* DMA0		MEM->(DMA0)->SSI0 */
+	RZA1DMA_SLAVE_PCM_MEM_SRC1,		/* DMA1		MEM->(DMA1)->FFD0_1->SRC1->SSI0 */
+	RZA1DMA_SLAVE_PCM_SSI0_MEM,		/* DMA2		SSI0->(DMA2)->MEM */
+	RZA1DMA_SLAVE_PCM_SRC0_MEM,		/* DMA3		SSI0->SRC0->FFU0_0->(DMA3)->MEM */
+	RZA1DMA_SLAVE_PCM_MAX,
+	RZA1DMA_SLAVE_SDHI0_TX,
+	RZA1DMA_SLAVE_SDHI0_RX,
+	RZA1DMA_SLAVE_SDHI1_TX,
+	RZA1DMA_SLAVE_SDHI1_RX,
+	RZA1DMA_SLAVE_MMCIF_TX,
+	RZA1DMA_SLAVE_MMCIF_RX,
+};
+
+union chcfg_reg {
+	u32	v;
+	struct {
+		u32 sel:  3;	/* LSB */
+		u32 reqd: 1;
+		u32 loen: 1;
+		u32 hien: 1;
+		u32 lvl:  1;
+		u32 _mbz0:1;
+		u32 am:   3;
+		u32 _mbz1:1;
+		u32 sds:  4;
+		u32 dds:  4;
+		u32 _mbz2:2;
+		u32 tm:   1;
+		u32 _mbz3:9;
+	};
+};
+
+union dmars_reg {
+	u32 v;
+	struct {
+		u32 rid:   2;	/* LSB */
+		u32 mid:   7;
+		u32 _mbz0:23;
+	};
+};
+
+/*
+ * Drivers, using this library are expected to embed struct shdma_dev,
+ * struct shdma_chan, struct shdma_desc, and struct shdma_slave
+ * in their respective device, channel, descriptor and slave objects.
+ */
+
+struct rza1dma_slave {
+	int slave_id;
+};
+
+/* Used by slave DMA clients to request DMA to/from a specific peripheral */
+struct rza1_dma_slave {
+	struct rza1dma_slave	rza1dma_slaveid;	/* Set by the platform */
+};
+
+struct rza1_dma_slave_config {
+	int			slave_id;
+	dma_addr_t		addr;
+	union chcfg_reg		chcfg;
+	union dmars_reg		dmars;
+};
+
+/* Static array to hold our slaves */
+// TODO: move into driver data structure
+static struct rza1_dma_slave_config rza1_dma_slaves[20];
 
 /* set the offset of regs */
 #define	CHSTAT	0x0024
@@ -198,7 +281,9 @@ struct rza1dma_engine {
 	int				irq;
 	spinlock_t			lock;		/* unused now */
 	struct dmac_channel		*channel;
-	struct rza1_dma_pdata		*pdata;
+	unsigned int			n_channels;
+	const struct rza1_dma_slave_config *slave;
+	int				slave_num;
 };
 
 static void rza1dma_writel(struct rza1dma_engine *rza1dma, unsigned val,
@@ -316,7 +401,7 @@ static void rza1dma_disable_hw(struct dmac_channel *channel)
 	local_irq_restore(flags);
 }
 
-static void dma_irq_handle_channel(struct dmac_channel *channel)
+static bool dma_irq_handle_channel(struct dmac_channel *channel)
 {
 	u32 chstat, chctrl;
 	struct rza1dma_engine *rza1dma = channel->rza1dma;
@@ -340,22 +425,29 @@ static void dma_irq_handle_channel(struct dmac_channel *channel)
 			chctrl | CHCTRL_CLREND | CHCTRL_CLRRQ,
 			CHCTRL, 1);
 schedule:
+#ifndef THREADED_CALLBACK
 	/* Tasklet irq */
 	tasklet_schedule(&channel->dma_tasklet);
+#endif
+	return true;
 }
 
 static irqreturn_t rza1dma_irq_handler(int irq, void *dev_id)
 {
 	struct rza1dma_engine *rza1dma = dev_id;
-	struct rza1_dma_pdata *pdata = rza1dma->pdata;
-	int i;
+	int i, channel_num = rza1dma->n_channels;
 
 	dev_dbg(rza1dma->dev, "%s called\n", __func__);
 
 	i = irq - rza1dma->irq;
-	if (i < pdata->channel_num) {	/* handle DMAINT irq */
+	if (i < channel_num) {	/* handle DMAINT irq */
+#ifdef THREADED_CALLBACK
+		if (dma_irq_handle_channel(&rza1dma->channel[i]))
+			return IRQ_WAKE_THREAD;	/* start the tasklets from the thread */
+#else
 		dma_irq_handle_channel(&rza1dma->channel[i]);
 		return IRQ_HANDLED;
+#endif
 	}
 	/* handle DMAERR irq */
 	return IRQ_HANDLED;
@@ -505,6 +597,22 @@ static int rza1dma_xfer_desc(struct dmac_desc *d)
 	return 0;
 }
 
+#ifdef THREADED_CALLBACK
+static irqreturn_t rza1dma_irq_handler_thread(int irq, void *dev_id)
+{
+	struct rza1dma_engine *rza1dma = dev_id;
+	int i, channel_num = rza1dma->n_channels;
+
+	i = irq - rza1dma->irq;
+	if (i < channel_num) {
+		/* call tasklet directly in thread context */
+		rza1dma_tasklet((unsigned long) &rza1dma->channel[i]);
+	}
+
+	return IRQ_HANDLED;
+}
+#endif
+
 static void rza1dma_tasklet(unsigned long data)
 {
 	struct dmac_channel *channel = (void *)data;
@@ -524,8 +632,10 @@ static void rza1dma_tasklet(unsigned long data)
 
 	desc = list_first_entry(&channel->ld_active, struct dmac_desc, node);
 
+#ifndef THREADED_CALLBACK
 	if (desc->desc.callback)
 		desc->desc.callback(desc->desc.callback_param);
+#endif
 
 	dma_cookie_complete(&desc->desc);
 
@@ -548,39 +658,35 @@ static void rza1dma_tasklet(unsigned long data)
 	}
 out:
 	spin_unlock_irqrestore(&channel->lock, flags);
+#ifdef THREADED_CALLBACK
+	dmaengine_desc_get_callback_invoke(&desc->desc, NULL);
+#endif
 }
 
-/* called through rza1dma->dma_device.device_control */
-static int rza1dma_control(struct dma_chan *chan, enum dma_ctrl_cmd cmd,
-			unsigned long arg)
+static int rza1dma_config(struct dma_chan *chan, struct dma_slave_config *config)
 {
-	struct dmac_channel *channel = to_rza1dma_chan(chan);
-	struct dma_slave_config *dmaengine_cfg = (void *)arg;
-	unsigned long flags;
-
-	switch (cmd) {
-	case DMA_TERMINATE_ALL:
-		rza1dma_disable_hw(channel);
-
-		spin_lock_irqsave(&channel->lock, flags);
-		list_splice_tail_init(&channel->ld_active, &channel->ld_free);
-		list_splice_tail_init(&channel->ld_queue, &channel->ld_free);
-		spin_unlock_irqrestore(&channel->lock, flags);
-		return 0;
-	case DMA_SLAVE_CONFIG:
-		if (dmaengine_cfg->direction == DMA_DEV_TO_MEM) {
-			channel->per_address = dmaengine_cfg->src_addr;
-			channel->word_size = dmaengine_cfg->src_addr_width;
-		} else {
-			channel->per_address = dmaengine_cfg->dst_addr;
-			channel->word_size = dmaengine_cfg->dst_addr_width;
-		}
-		return 0;
-	default:
-		return -ENOSYS;
+	struct dmac_channel *rza1dmac = to_rza1dma_chan(chan);
+	if (config->direction == DMA_DEV_TO_MEM) {
+		rza1dmac->per_address = config->src_addr;
+		rza1dmac->word_size = config->src_addr_width;
+	} else {
+		rza1dmac->per_address = config->dst_addr;
+		rza1dmac->word_size = config->dst_addr_width;
 	}
+	return 0;
+}
 
-	return -EINVAL;
+static int rza1dma_terminate_all(struct dma_chan *chan)
+{
+	struct dmac_channel *rza1dmac = to_rza1dma_chan(chan);
+	struct rza1dma_engine *rza1dma = rza1dmac->rza1dma;
+	unsigned long flags;
+	rza1dma_disable_hw(rza1dmac);
+	spin_lock_irqsave(&rza1dma->lock, flags);
+	list_splice_tail_init(&rza1dmac->ld_active, &rza1dmac->ld_free);
+	list_splice_tail_init(&rza1dmac->ld_queue, &rza1dmac->ld_free);
+	spin_unlock_irqrestore(&rza1dma->lock, flags);
+	return 0;
 }
 
 static const struct rza1_dma_slave_config *dma_find_slave(
@@ -604,11 +710,13 @@ bool rza1dma_chan_filter(struct dma_chan *chan, void *arg)
 {
 	struct dmac_channel *channel = to_rza1dma_chan(chan);
 	struct rza1dma_engine *rza1dma = channel->rza1dma;
-	struct rza1_dma_pdata *pdata = rza1dma->pdata;
-	const struct rza1_dma_slave_config *slave = pdata->slave;
+	const struct rza1_dma_slave_config *slave = rza1dma->slave;
 	const struct rza1_dma_slave_config *hit;
-	int slave_num = pdata->slave_num;
+	int slave_num = rza1dma->slave_num;
 	int slave_id = (int)arg;
+
+	struct of_phandle_args *dma_spec = arg;
+	slave_id = dma_spec->args[0];
 
 	hit = dma_find_slave(slave, slave_num, slave_id);
 	if (hit) {
@@ -647,10 +755,9 @@ static int rza1dma_alloc_chan_resources(struct dma_chan *chan)
 {
 	struct dmac_channel *channel = to_rza1dma_chan(chan);
 	struct rza1dma_engine *rza1dma = channel->rza1dma;
-	struct rza1_dma_pdata *pdata = rza1dma->pdata;
-	const struct rza1_dma_slave_config *slave = pdata->slave;
+	const struct rza1_dma_slave_config *slave = rza1dma->slave;
 	const struct rza1_dma_slave_config *hit;
-	int slave_num = pdata->slave_num;
+	int slave_num = rza1dma->slave_num;
 	int *slave_id = chan->private;
 
 	if (slave_id) {
@@ -775,6 +882,26 @@ static struct dma_async_tx_descriptor *rza1dma_prep_dma_memcpy(
 	return &desc->desc;
 }
 
+static struct dma_chan *rza1dma_of_xlate(struct of_phandle_args *dma_spec,
+					   struct of_dma *ofdma)
+{
+	struct dma_chan *chan;
+	dma_cap_mask_t mask;
+
+	if (dma_spec->args_count != 1)
+		return NULL;
+
+	/* Only slave DMA channels can be allocated via DT */
+	dma_cap_zero(mask);
+	dma_cap_set(DMA_SLAVE, mask);
+
+	chan = dma_request_channel(mask, rza1dma_chan_filter, dma_spec);
+	if (!chan)
+		return NULL;
+
+	return chan;
+}
+
 /* called through rza1dma->dma_device.device_issue_pending */
 static void rza1dma_issue_pending(struct dma_chan *chan)
 {
@@ -802,56 +929,137 @@ static void rza1dma_issue_pending(struct dma_chan *chan)
 	spin_unlock_irqrestore(&channel->lock, flags);
 }
 
-static int __init rza1dma_probe(struct platform_device *pdev)
+static int rza1dma_parse_of(struct device *dev, struct rza1dma_engine *rza1dma)
 {
-	struct rza1_dma_pdata *pdata = pdev->dev.platform_data;
+
+	int slave_id[10];
+	u32 addr_slave[10];
+	int chcfg[80];
+	int dmars[20];
+	int i = 0;
+	int n_slaves;
+	int ret;
+
+	struct device_node *np = dev->of_node;
+
+	ret = of_property_read_u32(np, "dma-channels", &rza1dma->n_channels);
+	if (ret < 0) {
+		dev_err(dev, "unable to read dma-channels property\n");
+		return ret;
+	}
+
+	if (rza1dma->n_channels <= 0 || rza1dma->n_channels >= 100) {
+		dev_err(dev, "invalid number of channels %u\n",
+			rza1dma->n_channels);
+		return -EINVAL;
+	}
+
+	n_slaves = of_property_count_elems_of_size(np, "slave_id", sizeof(u32));
+
+	if (of_property_read_u32_array(np, "slave_id", slave_id, n_slaves)) {
+		dev_err(dev, "get get id fail \n");
+		return -ENOMEM;
+	}
+
+	if (of_property_read_u32_array(np, "addr", addr_slave, n_slaves)) {
+		dev_err(dev, "get addr_slave fail \n");
+		return -ENOMEM;
+	}
+
+	if (of_property_read_u32_array(np, "chcfg", chcfg, n_slaves*8)) {
+		dev_err(dev, "get chcfg fail \n");
+		return -ENOMEM;
+	}
+
+	if (of_property_read_u32_array(np, "dmars", dmars, n_slaves*2)) {
+		dev_err(dev, "get dmars fail \n");
+		return -ENOMEM;
+	}
+
+	// TODO: change to kzalloc or just hard code in the struct
+	for(i = 0; i < n_slaves; i++)
+	{
+		rza1_dma_slaves[i].slave_id = slave_id[i];
+		rza1_dma_slaves[i].addr = addr_slave[i];
+
+		rza1_dma_slaves[i].chcfg.reqd	= chcfg[i*8];
+		rza1_dma_slaves[i].chcfg.loen	= chcfg[i*8+1];
+		rza1_dma_slaves[i].chcfg.hien	= chcfg[i*8+2];
+		rza1_dma_slaves[i].chcfg.lvl	= chcfg[i*8+3];
+		rza1_dma_slaves[i].chcfg.am	= chcfg[i*8+4];
+		rza1_dma_slaves[i].chcfg.sds	= chcfg[i*8+5];
+		rza1_dma_slaves[i].chcfg.dds	= chcfg[i*8+6];
+		rza1_dma_slaves[i].chcfg.tm	= chcfg[i*8+7];
+
+		rza1_dma_slaves[i].dmars.rid	= dmars[i*2];					\
+		rza1_dma_slaves[i].dmars.mid	= dmars[i*2+1];
+	}
+
+	rza1dma->slave = rza1_dma_slaves;
+	rza1dma->slave_num = n_slaves;
+
+	return 0;
+}
+
+const char irqnames[16][16] = {
+"rza-dma: ch0", "rza-dma: ch1", "rza-dma: ch2", "rza-dma: ch3", "rza-dma: ch4",
+"rza-dma: ch5", "rza-dma: ch6", "rza-dma: ch7", "rza-dma: ch8", "rza-dma: ch9",
+"rza-dma: ch10", "rza-dma: ch11", "rza-dma: ch12", "rza-dma: ch13", "rza-dma: ch14",
+"rza-dma: ch15" };
+static int rza1dma_probe(struct platform_device *pdev)
+{
 	struct rza1dma_engine *rza1dma;
-	struct resource *base_res, *ext_res, *cirq_res, *eirq_res;
+	int channel_num;
+	struct resource *mem;
+	char *irqname;
 	int ret, i;
-	int irq, irq_err;
+	int irq;
+	char pdev_irqname[50];
 
 	rza1dma = devm_kzalloc(&pdev->dev, sizeof(*rza1dma), GFP_KERNEL);
 	if (!rza1dma)
 		return -ENOMEM;
 
-	/* Get io base address */
-	base_res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	rza1dma->base = devm_ioremap_resource(&pdev->dev, base_res);
+	platform_set_drvdata(pdev, rza1dma);
+
+	ret = rza1dma_parse_of(&pdev->dev, rza1dma);
+	if (ret < 0)
+		return ret;
+
+	channel_num = rza1dma->n_channels;
+
+	/* Request resources */
+	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	rza1dma->base = devm_ioremap_resource(&pdev->dev, mem);
 	if (IS_ERR(rza1dma->base))
 		return PTR_ERR(rza1dma->base);
 
-	/* Get extension io base address */
-	ext_res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
-	rza1dma->ext_base = devm_ioremap_resource(&pdev->dev, ext_res);
+	mem = platform_get_resource(pdev, IORESOURCE_MEM, 1);
+	rza1dma->ext_base = devm_ioremap_resource(&pdev->dev, mem);
 	if (IS_ERR(rza1dma->ext_base))
 		return PTR_ERR(rza1dma->ext_base);
 
-	/* Register interrupt handler for channels */
-	cirq_res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
-	if (!cirq_res)
-		return -EINVAL;
-
-	rza1dma->irq = cirq_res->start;
-	for (irq = cirq_res->start; irq <= cirq_res->end; irq++) {
-		ret = devm_request_irq(&pdev->dev, irq,
-				       rza1dma_irq_handler, 0, "RZA1DMA", rza1dma);
-		if (ret) {
-			dev_warn(rza1dma->dev, "Can't register IRQ for DMA\n");
-			goto err;
-		}
+	/* Register interrupt handler for error */
+	irq = platform_get_irq_byname(pdev, "error");
+	if (irq < 0) {
+		dev_err(&pdev->dev, "no error IRQ specified\n");
+		return -ENODEV;
 	}
 
-	/* Register interrupt handler for error */
-	eirq_res = platform_get_resource(pdev, IORESOURCE_IRQ, 1);
-	if (!eirq_res)
-		return -EINVAL;
+//	irqname = devm_kasprintf(&pdev->dev, GFP_KERNEL, "%s:error",
+//				 dev_name(rza1dma->dev));
+//devm_kasprintf causes crash
+	irqname = "rza-dma: error";
 
-	irq_err = eirq_res->start;
-	ret = devm_request_irq(&pdev->dev, irq_err,
-				rza1dma_irq_handler, 0, "RZA1DMA_E", rza1dma);
+	if (!irqname)
+		return -ENOMEM;
+
+	ret = devm_request_irq(&pdev->dev, irq, rza1dma_irq_handler, 0,
+			       irqname, rza1dma);
 	if (ret) {
-		dev_warn(rza1dma->dev, "Can't register ERRIRQ for DMA\n");
-		goto err;
+		dev_err(&pdev->dev, "failed to request IRQ %u (%d)\n",
+			irq, ret);
+		return ret;
 	}
 
 	INIT_LIST_HEAD(&rza1dma->dma_device.channels);
@@ -860,15 +1068,48 @@ static int __init rza1dma_probe(struct platform_device *pdev)
 	spin_lock_init(&rza1dma->lock);
 
 	rza1dma->channel = devm_kzalloc(&pdev->dev,
-				sizeof(struct dmac_channel) * pdata->channel_num,
+				sizeof(struct dmac_channel) * channel_num,
 				GFP_KERNEL);
 
 	/* Initialize channel parameters */
-	for (i = 0; i < pdata->channel_num; i++) {
+	for (i = 0; i < channel_num; i++) {
 		struct dmac_channel *channel = &rza1dma->channel[i];
 		struct lmdesc *lmdesc;
 
 		channel->rza1dma = rza1dma;
+
+		/* Request the channel interrupt. */
+		sprintf(pdev_irqname, "ch%u", i);
+		irq = platform_get_irq_byname(pdev, pdev_irqname);
+		if (irq < 0) {
+			dev_err(rza1dma->dev, "no IRQ specified for channel %u\n", i);
+			return -ENODEV;
+		}
+
+		/* save the IRQ ID of channel 0 */
+		if (i == 0)
+			rza1dma->irq = irq;
+
+//		irqname = devm_kasprintf(&pdev->dev, GFP_KERNEL, "%s:%u",
+//					 dev_name(&pdev->dev), i);
+//devm_kasprintf causes crash
+		//irqname = "rza-dma: ch";
+
+		if (!irqname)
+			return -ENOMEM;
+
+#ifdef THREADED_CALLBACK
+		ret = devm_request_threaded_irq(&pdev->dev, irq, rza1dma_irq_handler,
+				rza1dma_irq_handler_thread, 0, irqnames[i], rza1dma);
+				//rza1dma_irq_handler_thread, 0, dev_name(&pdev->dev), rza1dma);
+#else
+		ret = devm_request_irq(&pdev->dev, irq, rza1dma_irq_handler, 0,
+				dev_name(&pdev->dev), rza1dma);
+#endif
+		if (ret) {
+			dev_err(rza1dma->dev, "failed to request IRQ %u (%d)\n", irq, ret);
+			return ret;
+		}
 
 		INIT_LIST_HEAD(&channel->ld_queue);
 		INIT_LIST_HEAD(&channel->ld_free);
@@ -911,11 +1152,15 @@ static int __init rza1dma_probe(struct platform_device *pdev)
 		rza1dma_ch_writel(channel, CHCTRL_DEFAULT, CHCTRL, 1);
 	}
 
+	/* Register the DMAC as a DMA provider for DT. */
+	if (of_dma_controller_register(pdev->dev.of_node, rza1dma_of_xlate,
+				       NULL) < 0 )
+		dev_err(&pdev->dev, "unable to register as provider provider for DT\n");
+
 	/* Initialize register for all channels */
 	rza1dma_writel(rza1dma, DCTRL_DEFAULT, CHANNEL_0_7_COMMON_BASE	+ DCTRL);
 	rza1dma_writel(rza1dma, DCTRL_DEFAULT, CHANNEL_8_15_COMMON_BASE + DCTRL);
 
-	rza1dma->pdata = pdata;
 	rza1dma->dev = &pdev->dev;
 	rza1dma->dma_device.dev = &pdev->dev;
 
@@ -924,7 +1169,8 @@ static int __init rza1dma_probe(struct platform_device *pdev)
 	rza1dma->dma_device.device_tx_status = rza1dma_tx_status;
 	rza1dma->dma_device.device_prep_slave_sg = rza1dma_prep_slave_sg;
 	rza1dma->dma_device.device_prep_dma_memcpy = rza1dma_prep_dma_memcpy;
-	rza1dma->dma_device.device_control = rza1dma_control;
+	rza1dma->dma_device.device_config = rza1dma_config;
+	rza1dma->dma_device.device_terminate_all = rza1dma_terminate_all;
 	rza1dma->dma_device.device_issue_pending = rza1dma_issue_pending;
 
 	platform_set_drvdata(pdev, rza1dma);
@@ -949,11 +1195,13 @@ err:
 static int __exit rza1dma_remove(struct platform_device *pdev)
 {
 	struct rza1dma_engine *rza1dma = platform_get_drvdata(pdev);
-	struct rza1_dma_pdata *pdata = rza1dma->pdata;
-	int i;
+	int i, channel_num = rza1dma->n_channels;
+
+	of_dma_controller_free(pdev->dev.of_node);
+	dma_async_device_unregister(&rza1dma->dma_device);
 
 	/* free allocated resources */
-	for (i = 0; i < pdata->channel_num; i++) {
+	for (i = 0; i < channel_num; i++) {
 		struct dmac_channel *channel = &rza1dma->channel[i];
 
 		dma_free_coherent(NULL,
@@ -962,23 +1210,30 @@ static int __exit rza1dma_remove(struct platform_device *pdev)
 				channel->lmdesc.base_dma);
 	}
 
-	dma_async_device_unregister(&rza1dma->dma_device);
 	return 0;
 }
 
+static struct of_device_id of_rza1dma_match[] = {
+	{.compatible = "renesas,rza-dma"},
+	{},
+};
+MODULE_DEVICE_TABLE(of, of_rza1dma_match);
+
 static struct platform_driver rza1dma_driver = {
 	.driver		= {
-		.name	= "rza1-dma",
+		.name	= "rza-dma",
+		.of_match_table = of_rza1dma_match,
 	},
+	.probe 		= rza1dma_probe,
 	.remove		= __exit_p(rza1dma_remove),
 };
 
-static int __init rza1dma_module_init(void)
+static int rza1dma_init(void)
 {
-	return platform_driver_probe(&rza1dma_driver, rza1dma_probe);
+	return platform_driver_register(&rza1dma_driver);
 }
-subsys_initcall(rza1dma_module_init);
+subsys_initcall(rza1dma_init);
 
-MODULE_AUTHOR("RSO");
-MODULE_DESCRIPTION("Renesas RZA1 DMA Engine driver");
+MODULE_AUTHOR("Renesas Electronics");
+MODULE_DESCRIPTION("Renesas RZA DMA Engine driver");
 MODULE_LICENSE("GPL");
