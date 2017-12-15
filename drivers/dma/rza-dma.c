@@ -1,5 +1,5 @@
 /*
- * Renesas RZA1 DMA Engine support
+ * Renesas RZA DMA Engine support
  *
  * base is drivers/dma/imx-dma.c
  *
@@ -34,7 +34,7 @@
 #include <asm/irq.h>
 
 #include "dmaengine.h"
-#define RZA1DMA_MAX_CHAN_DESCRIPTORS	16
+#define RZADMA_MAX_CHAN_DESCRIPTORS	16
 
 #include <linux/scatterlist.h>
 #include <linux/device.h>
@@ -51,21 +51,21 @@
  */
 #define THREADED_CALLBACK
 
-static void rza1dma_tasklet(unsigned long data);	//asdf
+static void rzadma_tasklet(unsigned long data);	//asdf
 
 /* DMA slave IDs */
 enum {
-	RZA1DMA_SLAVE_PCM_MEM_SSI0 = 1,	/* DMA0		MEM->(DMA0)->SSI0 */
-	RZA1DMA_SLAVE_PCM_MEM_SRC1,		/* DMA1		MEM->(DMA1)->FFD0_1->SRC1->SSI0 */
-	RZA1DMA_SLAVE_PCM_SSI0_MEM,		/* DMA2		SSI0->(DMA2)->MEM */
-	RZA1DMA_SLAVE_PCM_SRC0_MEM,		/* DMA3		SSI0->SRC0->FFU0_0->(DMA3)->MEM */
-	RZA1DMA_SLAVE_PCM_MAX,
-	RZA1DMA_SLAVE_SDHI0_TX,
-	RZA1DMA_SLAVE_SDHI0_RX,
-	RZA1DMA_SLAVE_SDHI1_TX,
-	RZA1DMA_SLAVE_SDHI1_RX,
-	RZA1DMA_SLAVE_MMCIF_TX,
-	RZA1DMA_SLAVE_MMCIF_RX,
+	RZADMA_SLAVE_PCM_MEM_SSI0 = 1,	/* DMA0		MEM->(DMA0)->SSI0 */
+	RZADMA_SLAVE_PCM_MEM_SRC1,		/* DMA1		MEM->(DMA1)->FFD0_1->SRC1->SSI0 */
+	RZADMA_SLAVE_PCM_SSI0_MEM,		/* DMA2		SSI0->(DMA2)->MEM */
+	RZADMA_SLAVE_PCM_SRC0_MEM,		/* DMA3		SSI0->SRC0->FFU0_0->(DMA3)->MEM */
+	RZADMA_SLAVE_PCM_MAX,
+	RZADMA_SLAVE_SDHI0_TX,
+	RZADMA_SLAVE_SDHI0_RX,
+	RZADMA_SLAVE_SDHI1_TX,
+	RZADMA_SLAVE_SDHI1_RX,
+	RZADMA_SLAVE_MMCIF_TX,
+	RZADMA_SLAVE_MMCIF_RX,
 };
 
 union chcfg_reg {
@@ -102,16 +102,16 @@ union dmars_reg {
  * in their respective device, channel, descriptor and slave objects.
  */
 
-struct rza1dma_slave {
+struct rzadma_slave {
 	int slave_id;
 };
 
 /* Used by slave DMA clients to request DMA to/from a specific peripheral */
-struct rza1_dma_slave {
-	struct rza1dma_slave	rza1dma_slaveid;	/* Set by the platform */
+struct rza_dma_slave {
+	struct rzadma_slave	rzadma_slaveid;	/* Set by the platform */
 };
 
-struct rza1_dma_slave_config {
+struct rza_dma_slave_config {
 	int			slave_id;
 	dma_addr_t		addr;
 	union chcfg_reg		chcfg;
@@ -120,7 +120,7 @@ struct rza1_dma_slave_config {
 
 /* Static array to hold our slaves */
 // TODO: move into driver data structure
-static struct rza1_dma_slave_config rza1_dma_slaves[20];
+static struct rza_dma_slave_config rza_dma_slaves[20];
 
 /* set the offset of regs */
 #define	CHSTAT	0x0024
@@ -201,11 +201,11 @@ static struct rza1_dma_slave_config rza1_dma_slaves[20];
 #define	HEADER_LE	(0x1 << 1)
 #define	HEADER_LV	(0x1 << 0)
 
-#define to_rza1dma_chan(c) container_of(c, struct dmac_channel, chan)
+#define to_rzadma_chan(c) container_of(c, struct dmac_channel, chan)
 
-enum  rza1dma_prep_type {
-	RZA1DMA_DESC_MEMCPY,
-	RZA1DMA_DESC_SLAVE_SG,
+enum  rzadma_prep_type {
+	RZADMA_DESC_MEMCPY,
+	RZADMA_DESC_SLAVE_SG,
 };
 
 struct lmdesc {
@@ -228,7 +228,7 @@ struct dmac_desc {
 	dma_addr_t			dest;
 	size_t				len;
 	enum dma_transfer_direction	direction;
-	enum rza1dma_prep_type		type;
+	enum rzadma_prep_type		type;
 	/* For memcpy */
 	unsigned int			config_port;
 	unsigned int			config_mem;
@@ -238,7 +238,7 @@ struct dmac_desc {
 };
 
 struct dmac_channel {
-	struct rza1dma_engine		*rza1dma;
+	struct rzadma_engine		*rzadma;
 	unsigned int			nr;
 	spinlock_t			lock;
 	struct tasklet_struct		dma_tasklet;
@@ -252,7 +252,7 @@ struct dmac_channel {
 	struct dma_async_tx_descriptor	desc;
 	enum dma_status			status;
 
-	const struct rza1_dma_slave_config	*slave;
+	const struct rza_dma_slave_config	*slave;
 	void __iomem			*ch_base;
 	void __iomem			*ch_cmn_base;
 	struct {
@@ -272,7 +272,7 @@ struct dmac_channel {
 	} stat;
 };
 
-struct rza1dma_engine {
+struct rzadma_engine {
 	struct device			*dev;
 	struct device_dma_parameters	dma_parms;
 	struct dma_device		dma_device;
@@ -282,28 +282,28 @@ struct rza1dma_engine {
 	spinlock_t			lock;		/* unused now */
 	struct dmac_channel		*channel;
 	unsigned int			n_channels;
-	const struct rza1_dma_slave_config *slave;
+	const struct rza_dma_slave_config *slave;
 	int				slave_num;
 };
 
-static void rza1dma_writel(struct rza1dma_engine *rza1dma, unsigned val,
+static void rzadma_writel(struct rzadma_engine *rzadma, unsigned val,
 				unsigned offset)
 {
-	__raw_writel(val, rza1dma->base + offset);
+	__raw_writel(val, rzadma->base + offset);
 }
 
-static void rza1dma_ext_writel(struct rza1dma_engine *rza1dma, unsigned val,
+static void rzadma_ext_writel(struct rzadma_engine *rzadma, unsigned val,
 				unsigned offset)
 {
-	__raw_writel(val, rza1dma->ext_base + offset);
+	__raw_writel(val, rzadma->ext_base + offset);
 }
 
-static u32 rza1dma_ext_readl(struct rza1dma_engine *rza1dma, unsigned offset)
+static u32 rzadma_ext_readl(struct rzadma_engine *rzadma, unsigned offset)
 {
-	return __raw_readl(rza1dma->ext_base + offset);
+	return __raw_readl(rzadma->ext_base + offset);
 }
 
-static void rza1dma_ch_writel(struct dmac_channel *channel, unsigned val,
+static void rzadma_ch_writel(struct dmac_channel *channel, unsigned val,
 				unsigned offset, int which)
 {
 	if (which)
@@ -312,7 +312,7 @@ static void rza1dma_ch_writel(struct dmac_channel *channel, unsigned val,
 		__raw_writel(val, channel->ch_cmn_base + offset);
 }
 
-static u32 rza1dma_ch_readl(struct dmac_channel *channel, unsigned offset,
+static u32 rzadma_ch_readl(struct dmac_channel *channel, unsigned offset,
 				int which)
 {
 	if (which)
@@ -355,17 +355,17 @@ static void lmdesc_recycle(struct dmac_channel *channel)
 	channel->lmdesc.head = lmdesc;
 }
 
-static void rza1dma_enable_hw(struct dmac_desc *d)
+static void rzadma_enable_hw(struct dmac_desc *d)
 {
 	struct dma_chan *chan = d->desc.chan;
-	struct dmac_channel *channel = to_rza1dma_chan(chan);
-	struct rza1dma_engine *rza1dma = channel->rza1dma;
+	struct dmac_channel *channel = to_rzadma_chan(chan);
+	struct rzadma_engine *rzadma = channel->rzadma;
 	unsigned long flags;
 	u32 nxla;
 	u32 chctrl;
 	u32 chstat;
 
-	dev_dbg(rza1dma->dev, "%s channel %d\n", __func__, channel->nr);
+	dev_dbg(rzadma->dev, "%s channel %d\n", __func__, channel->nr);
 
 	local_irq_save(flags);
 
@@ -376,52 +376,52 @@ static void rza1dma_enable_hw(struct dmac_desc *d)
 
 //	if (chctrl & CHCTRL_SETEN) {			/* When [SETEN]is "0".already before process add Descriptor */
 //								/* Only add Descriptor case.skip write register */
-	chstat = rza1dma_ch_readl(channel, CHSTAT, 1);
+	chstat = rzadma_ch_readl(channel, CHSTAT, 1);
 	if (!(chstat & CHSTAT_EN)) {
 
 		chctrl = (channel->chctrl | CHCTRL_SETEN);
-		rza1dma_ch_writel(channel, nxla, NXLA, 1);		/* NXLA reg */
-		rza1dma_ch_writel(channel, channel->chcfg, CHCFG, 1);	/* CHCFG reg */
-		rza1dma_ch_writel(channel, CHCTRL_SWRST, CHCTRL, 1);	/* CHCTRL reg */
-		rza1dma_ch_writel(channel, chctrl, CHCTRL, 1);		/* CHCTRL reg */
+		rzadma_ch_writel(channel, nxla, NXLA, 1);		/* NXLA reg */
+		rzadma_ch_writel(channel, channel->chcfg, CHCFG, 1);	/* CHCFG reg */
+		rzadma_ch_writel(channel, CHCTRL_SWRST, CHCTRL, 1);	/* CHCTRL reg */
+		rzadma_ch_writel(channel, chctrl, CHCTRL, 1);		/* CHCTRL reg */
 	}
 
 	local_irq_restore(flags);
 }
 
-static void rza1dma_disable_hw(struct dmac_channel *channel)
+static void rzadma_disable_hw(struct dmac_channel *channel)
 {
-	struct rza1dma_engine *rza1dma = channel->rza1dma;
+	struct rzadma_engine *rzadma = channel->rzadma;
 	unsigned long flags;
 
-	dev_dbg(rza1dma->dev, "%s channel %d\n", __func__, channel->nr);
+	dev_dbg(rzadma->dev, "%s channel %d\n", __func__, channel->nr);
 
 	local_irq_save(flags);
-	rza1dma_ch_writel(channel, CHCTRL_DEFAULT, CHCTRL, 1); /* CHCTRL reg */
+	rzadma_ch_writel(channel, CHCTRL_DEFAULT, CHCTRL, 1); /* CHCTRL reg */
 	local_irq_restore(flags);
 }
 
 static bool dma_irq_handle_channel(struct dmac_channel *channel)
 {
 	u32 chstat, chctrl;
-	struct rza1dma_engine *rza1dma = channel->rza1dma;
+	struct rzadma_engine *rzadma = channel->rzadma;
 
-	chstat = rza1dma_ch_readl(channel, CHSTAT, 1);
+	chstat = rzadma_ch_readl(channel, CHSTAT, 1);
 	if (chstat & CHSTAT_ER) {
-		dev_err(rza1dma->dev, "RZA1 DMAC error ocurred\n");
-		dev_err(rza1dma->dev, "CHSTAT_%d = %08X\n", channel->nr, chstat);
-		rza1dma_ch_writel(channel,
+		dev_err(rzadma->dev, "RZA DMAC error ocurred\n");
+		dev_err(rzadma->dev, "CHSTAT_%d = %08X\n", channel->nr, chstat);
+		rzadma_ch_writel(channel,
 				CHCTRL_DEFAULT,
 				CHCTRL, 1);
 		goto schedule;
 	}
 //	if (!(chstat & CHSTAT_END)) {
-//		dev_err(rza1dma->dev, "RZA1 DMAC premature IRQ (%x)\n", chstat);
+//		dev_err(rzadma->dev, "RZA DMAC premature IRQ (%x)\n", chstat);
 //		return;
 //	}
 
-	chctrl = rza1dma_ch_readl(channel, CHCTRL, 1);
-	rza1dma_ch_writel(channel,
+	chctrl = rzadma_ch_readl(channel, CHCTRL, 1);
+	rzadma_ch_writel(channel,
 			chctrl | CHCTRL_CLREND | CHCTRL_CLRRQ,
 			CHCTRL, 1);
 schedule:
@@ -432,20 +432,20 @@ schedule:
 	return true;
 }
 
-static irqreturn_t rza1dma_irq_handler(int irq, void *dev_id)
+static irqreturn_t rzadma_irq_handler(int irq, void *dev_id)
 {
-	struct rza1dma_engine *rza1dma = dev_id;
-	int i, channel_num = rza1dma->n_channels;
+	struct rzadma_engine *rzadma = dev_id;
+	int i, channel_num = rzadma->n_channels;
 
-	dev_dbg(rza1dma->dev, "%s called\n", __func__);
+	dev_dbg(rzadma->dev, "%s called\n", __func__);
 
-	i = irq - rza1dma->irq;
+	i = irq - rzadma->irq;
 	if (i < channel_num) {	/* handle DMAINT irq */
 #ifdef THREADED_CALLBACK
-		if (dma_irq_handle_channel(&rza1dma->channel[i]))
+		if (dma_irq_handle_channel(&rzadma->channel[i]))
 			return IRQ_WAKE_THREAD;	/* start the tasklets from the thread */
 #else
-		dma_irq_handle_channel(&rza1dma->channel[i]);
+		dma_irq_handle_channel(&rzadma->channel[i]);
 		return IRQ_HANDLED;
 #endif
 	}
@@ -453,13 +453,13 @@ static irqreturn_t rza1dma_irq_handler(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static void set_dmars_register(struct rza1dma_engine *rza1dma,
+static void set_dmars_register(struct rzadma_engine *rzadma,
 				int nr, u32 dmars)
 {
 	u32 dmars_offset = (nr / 2) * 4;
 	u32 dmars32;
 
-	dmars32 = rza1dma_ext_readl(rza1dma, dmars_offset);
+	dmars32 = rzadma_ext_readl(rzadma, dmars_offset);
 	if (nr % 2) {
 		dmars32 &= 0x0000ffff;
 		dmars32 |= dmars << 16;
@@ -467,20 +467,20 @@ static void set_dmars_register(struct rza1dma_engine *rza1dma,
 		dmars32 &= 0xffff0000;
 		dmars32 |= dmars;
 	}
-	rza1dma_ext_writel(rza1dma, dmars32, dmars_offset);
+	rzadma_ext_writel(rzadma, dmars32, dmars_offset);
 
 }
 
 static void prepare_desc_for_memcpy(struct dmac_desc *d)
 {
 	struct dma_chan *chan = d->desc.chan;
-	struct dmac_channel *channel = to_rza1dma_chan(chan);
-	struct rza1dma_engine *rza1dma = channel->rza1dma;
+	struct dmac_channel *channel = to_rzadma_chan(chan);
+	struct rzadma_engine *rzadma = channel->rzadma;
 	struct lmdesc *lmdesc = channel->lmdesc.base;
 	u32 chcfg = 0x80400008;
 	u32 dmars = 0;
 
-	dev_dbg(rza1dma->dev, "%s called\n", __func__);
+	dev_dbg(rzadma->dev, "%s called\n", __func__);
 	BUG_ON(1);
 
 	lmdesc = channel->lmdesc.tail;
@@ -499,7 +499,7 @@ static void prepare_desc_for_memcpy(struct dmac_desc *d)
 #endif
 
 	/* and set DMARS register */
-	set_dmars_register(rza1dma, channel->nr, dmars);
+	set_dmars_register(rzadma, channel->nr, dmars);
 
 	channel->chcfg = chcfg;
 	channel->chctrl = CHCTRL_STG | CHCTRL_SETEN;
@@ -508,17 +508,17 @@ static void prepare_desc_for_memcpy(struct dmac_desc *d)
 static void prepare_descs_for_slave_sg(struct dmac_desc *d)
 {
 	struct dma_chan *chan = d->desc.chan;
-	struct dmac_channel *channel = to_rza1dma_chan(chan);
-	struct rza1dma_engine *rza1dma = channel->rza1dma;
+	struct dmac_channel *channel = to_rzadma_chan(chan);
+	struct rzadma_engine *rzadma = channel->rzadma;
 	struct lmdesc *lmdesc;
-	const struct rza1_dma_slave_config *slave = channel->slave;
+	const struct rza_dma_slave_config *slave = channel->slave;
 	struct scatterlist *sg, *sgl = d->sg;
 	unsigned int i, sg_len = d->sgcount;
 	unsigned long flags;
 	u32 chcfg;
 	u32 dmars;
 	
-	dev_dbg(rza1dma->dev, "%s called\n", __func__);
+	dev_dbg(rzadma->dev, "%s called\n", __func__);
 
 	chcfg = channel->slave->chcfg.v | (CHCFG_SEL(channel->nr) | CHCFG_DEM | CHCFG_DMS);
 
@@ -569,7 +569,7 @@ static void prepare_descs_for_slave_sg(struct dmac_desc *d)
 
 	/* and set DMARS register */
 	dmars = channel->slave->dmars.v;
-	set_dmars_register(rza1dma, channel->nr, dmars);
+	set_dmars_register(rzadma, channel->nr, dmars);
 
 	channel->chctrl = CHCTRL_SETEN;		/* always */
 
@@ -577,15 +577,15 @@ static void prepare_descs_for_slave_sg(struct dmac_desc *d)
 
 }
 
-static int rza1dma_xfer_desc(struct dmac_desc *d)
+static int rzadma_xfer_desc(struct dmac_desc *d)
 {
 	/* Configure and enable */
 	switch (d->type) {
-	case RZA1DMA_DESC_MEMCPY:
+	case RZADMA_DESC_MEMCPY:
 		prepare_desc_for_memcpy(d);
 		break;
 
-	case RZA1DMA_DESC_SLAVE_SG:
+	case RZADMA_DESC_SLAVE_SG:
 		prepare_descs_for_slave_sg(d);
 		break;
 
@@ -593,34 +593,34 @@ static int rza1dma_xfer_desc(struct dmac_desc *d)
 		return -EINVAL;
 	}
 
-	rza1dma_enable_hw(d);
+	rzadma_enable_hw(d);
 	return 0;
 }
 
 #ifdef THREADED_CALLBACK
-static irqreturn_t rza1dma_irq_handler_thread(int irq, void *dev_id)
+static irqreturn_t rzadma_irq_handler_thread(int irq, void *dev_id)
 {
-	struct rza1dma_engine *rza1dma = dev_id;
-	int i, channel_num = rza1dma->n_channels;
+	struct rzadma_engine *rzadma = dev_id;
+	int i, channel_num = rzadma->n_channels;
 
-	i = irq - rza1dma->irq;
+	i = irq - rzadma->irq;
 	if (i < channel_num) {
 		/* call tasklet directly in thread context */
-		rza1dma_tasklet((unsigned long) &rza1dma->channel[i]);
+		rzadma_tasklet((unsigned long) &rzadma->channel[i]);
 	}
 
 	return IRQ_HANDLED;
 }
 #endif
 
-static void rza1dma_tasklet(unsigned long data)
+static void rzadma_tasklet(unsigned long data)
 {
 	struct dmac_channel *channel = (void *)data;
-	struct rza1dma_engine *rza1dma = channel->rza1dma;
+	struct rzadma_engine *rzadma = channel->rzadma;
 	struct dmac_desc *desc;
 	unsigned long flags;
 
-	dev_dbg(rza1dma->dev, "%s called\n", __func__);
+	dev_dbg(rzadma->dev, "%s called\n", __func__);
 
 	/* Protection of critical section */
 	spin_lock_irqsave(&channel->lock, flags);
@@ -649,8 +649,8 @@ static void rza1dma_tasklet(unsigned long data)
 	if (!list_empty(&channel->ld_queue)) {
 		desc = list_first_entry(&channel->ld_queue, struct dmac_desc,
 					node);
-		if (rza1dma_xfer_desc(desc) < 0) {
-			dev_warn(rza1dma->dev, "%s: channel: %d couldn't xfer desc\n",
+		if (rzadma_xfer_desc(desc) < 0) {
+			dev_warn(rzadma->dev, "%s: channel: %d couldn't xfer desc\n",
 				 __func__, channel->nr);
 		} else {
 			list_move_tail(channel->ld_queue.next, &channel->ld_active);
@@ -663,41 +663,41 @@ out:
 #endif
 }
 
-static int rza1dma_config(struct dma_chan *chan, struct dma_slave_config *config)
+static int rzadma_config(struct dma_chan *chan, struct dma_slave_config *config)
 {
-	struct dmac_channel *rza1dmac = to_rza1dma_chan(chan);
+	struct dmac_channel *rzadmac = to_rzadma_chan(chan);
 	if (config->direction == DMA_DEV_TO_MEM) {
-		rza1dmac->per_address = config->src_addr;
-		rza1dmac->word_size = config->src_addr_width;
+		rzadmac->per_address = config->src_addr;
+		rzadmac->word_size = config->src_addr_width;
 	} else {
-		rza1dmac->per_address = config->dst_addr;
-		rza1dmac->word_size = config->dst_addr_width;
+		rzadmac->per_address = config->dst_addr;
+		rzadmac->word_size = config->dst_addr_width;
 	}
 	return 0;
 }
 
-static int rza1dma_terminate_all(struct dma_chan *chan)
+static int rzadma_terminate_all(struct dma_chan *chan)
 {
-	struct dmac_channel *rza1dmac = to_rza1dma_chan(chan);
-	struct rza1dma_engine *rza1dma = rza1dmac->rza1dma;
+	struct dmac_channel *rzadmac = to_rzadma_chan(chan);
+	struct rzadma_engine *rzadma = rzadmac->rzadma;
 	unsigned long flags;
-	rza1dma_disable_hw(rza1dmac);
-	spin_lock_irqsave(&rza1dma->lock, flags);
-	list_splice_tail_init(&rza1dmac->ld_active, &rza1dmac->ld_free);
-	list_splice_tail_init(&rza1dmac->ld_queue, &rza1dmac->ld_free);
-	spin_unlock_irqrestore(&rza1dma->lock, flags);
+	rzadma_disable_hw(rzadmac);
+	spin_lock_irqsave(&rzadma->lock, flags);
+	list_splice_tail_init(&rzadmac->ld_active, &rzadmac->ld_free);
+	list_splice_tail_init(&rzadmac->ld_queue, &rzadmac->ld_free);
+	spin_unlock_irqrestore(&rzadma->lock, flags);
 	return 0;
 }
 
-static const struct rza1_dma_slave_config *dma_find_slave(
-		const struct rza1_dma_slave_config *slave,
+static const struct rza_dma_slave_config *dma_find_slave(
+		const struct rza_dma_slave_config *slave,
 		int slave_num,
 		int slave_id)
 {
 	int i;
 
 	for (i = 0; i < slave_num; i++) {
-		const struct rza1_dma_slave_config *t = &slave[i];
+		const struct rza_dma_slave_config *t = &slave[i];
 
 		if (slave_id == t->slave_id)
 			return t;
@@ -706,13 +706,13 @@ static const struct rza1_dma_slave_config *dma_find_slave(
 	return NULL;
 }
 
-bool rza1dma_chan_filter(struct dma_chan *chan, void *arg)
+bool rzadma_chan_filter(struct dma_chan *chan, void *arg)
 {
-	struct dmac_channel *channel = to_rza1dma_chan(chan);
-	struct rza1dma_engine *rza1dma = channel->rza1dma;
-	const struct rza1_dma_slave_config *slave = rza1dma->slave;
-	const struct rza1_dma_slave_config *hit;
-	int slave_num = rza1dma->slave_num;
+	struct dmac_channel *channel = to_rzadma_chan(chan);
+	struct rzadma_engine *rzadma = channel->rzadma;
+	const struct rza_dma_slave_config *slave = rzadma->slave;
+	const struct rza_dma_slave_config *hit;
+	int slave_num = rzadma->slave_num;
 	int slave_id = (int)arg;
 
 	struct of_phandle_args *dma_spec = arg;
@@ -725,20 +725,20 @@ bool rza1dma_chan_filter(struct dma_chan *chan, void *arg)
 	}
 	return false;
 }
-EXPORT_SYMBOL(rza1dma_chan_filter);
+EXPORT_SYMBOL(rzadma_chan_filter);
 
-/* called through rza1dma->dma_device.device_tx_status */
-static enum dma_status rza1dma_tx_status(struct dma_chan *chan,
+/* called through rzadma->dma_device.device_tx_status */
+static enum dma_status rzadma_tx_status(struct dma_chan *chan,
 					dma_cookie_t cookie,
 					struct dma_tx_state *txstate)
 {
 	return dma_cookie_status(chan, cookie, txstate);
 }
 
-static dma_cookie_t rza1dma_tx_submit(struct dma_async_tx_descriptor *tx)
+static dma_cookie_t rzadma_tx_submit(struct dma_async_tx_descriptor *tx)
 {
 	struct dma_chan *chan = tx->chan;
-	struct dmac_channel *channel = to_rza1dma_chan(chan);
+	struct dmac_channel *channel = to_rzadma_chan(chan);
 	dma_cookie_t cookie;
 	unsigned long flags;
 
@@ -750,14 +750,14 @@ static dma_cookie_t rza1dma_tx_submit(struct dma_async_tx_descriptor *tx)
 	return cookie;
 }
 
-/* called through rza1dma->dma_device.device_alloc_chan_resources */
-static int rza1dma_alloc_chan_resources(struct dma_chan *chan)
+/* called through rzadma->dma_device.device_alloc_chan_resources */
+static int rzadma_alloc_chan_resources(struct dma_chan *chan)
 {
-	struct dmac_channel *channel = to_rza1dma_chan(chan);
-	struct rza1dma_engine *rza1dma = channel->rza1dma;
-	const struct rza1_dma_slave_config *slave = rza1dma->slave;
-	const struct rza1_dma_slave_config *hit;
-	int slave_num = rza1dma->slave_num;
+	struct dmac_channel *channel = to_rzadma_chan(chan);
+	struct rzadma_engine *rzadma = channel->rzadma;
+	const struct rza_dma_slave_config *slave = rzadma->slave;
+	const struct rza_dma_slave_config *hit;
+	int slave_num = rzadma->slave_num;
 	int *slave_id = chan->private;
 
 	if (slave_id) {
@@ -767,7 +767,7 @@ static int rza1dma_alloc_chan_resources(struct dma_chan *chan)
 		channel->slave = hit;
 	}
 
-	while (channel->descs_allocated < RZA1DMA_MAX_CHAN_DESCRIPTORS) {
+	while (channel->descs_allocated < RZADMA_MAX_CHAN_DESCRIPTORS) {
 		struct dmac_desc *desc;
 
 		desc = kzalloc(sizeof(*desc), GFP_KERNEL);
@@ -775,7 +775,7 @@ static int rza1dma_alloc_chan_resources(struct dma_chan *chan)
 			break;
 		__memzero(&desc->desc, sizeof(struct dma_async_tx_descriptor));
 		dma_async_tx_descriptor_init(&desc->desc, chan);
-		desc->desc.tx_submit = rza1dma_tx_submit;
+		desc->desc.tx_submit = rzadma_tx_submit;
 		/* txd.flags will be overwritten in prep funcs */
 		desc->desc.flags = DMA_CTRL_ACK;
 		desc->status = DMA_COMPLETE;
@@ -789,10 +789,10 @@ static int rza1dma_alloc_chan_resources(struct dma_chan *chan)
 	return channel->descs_allocated;
 }
 
-/* called through rza1dma->dma_device.device_free_chan_resources */
-static void rza1dma_free_chan_resources(struct dma_chan *chan)
+/* called through rzadma->dma_device.device_free_chan_resources */
+static void rzadma_free_chan_resources(struct dma_chan *chan)
 {
-	struct dmac_channel *channel = to_rza1dma_chan(chan);
+	struct dmac_channel *channel = to_rzadma_chan(chan);
 	struct lmdesc *lmdesc = channel->lmdesc.base;
 	struct dmac_desc *desc, *_desc;
 	unsigned long flags;
@@ -804,7 +804,7 @@ static void rza1dma_free_chan_resources(struct dma_chan *chan)
 		lmdesc[i].header = 0;
 	}
 
-	rza1dma_disable_hw(channel);
+	rzadma_disable_hw(channel);
 	list_splice_tail_init(&channel->ld_active, &channel->ld_free);
 	list_splice_tail_init(&channel->ld_queue, &channel->ld_free);
 
@@ -817,13 +817,13 @@ static void rza1dma_free_chan_resources(struct dma_chan *chan)
 	INIT_LIST_HEAD(&channel->ld_free);
 }
 
-/* called through rza1dma->dma_device.device_prep_slave_sg */
-static struct dma_async_tx_descriptor *rza1dma_prep_slave_sg(
+/* called through rzadma->dma_device.device_prep_slave_sg */
+static struct dma_async_tx_descriptor *rzadma_prep_slave_sg(
 	struct dma_chan *chan, struct scatterlist *sgl,
 	unsigned int sg_len, enum dma_transfer_direction direction,
 	unsigned long flags, void *context)
 {
-	struct dmac_channel *channel = to_rza1dma_chan(chan);
+	struct dmac_channel *channel = to_rzadma_chan(chan);
 	struct scatterlist *sg;
 	int i, dma_length = 0;
 	struct dmac_desc *desc;
@@ -837,7 +837,7 @@ static struct dma_async_tx_descriptor *rza1dma_prep_slave_sg(
 		dma_length += sg_dma_len(sg);
 	}
 
-	desc->type = RZA1DMA_DESC_SLAVE_SG;
+	desc->type = RZADMA_DESC_SLAVE_SG;
 	desc->sg = sgl;
 	desc->sgcount = sg_len;
 	desc->len = dma_length;
@@ -854,16 +854,16 @@ static struct dma_async_tx_descriptor *rza1dma_prep_slave_sg(
 	return &desc->desc;
 }
 
-/* called through rza1dma->dma_device.device_prep_dma_memcpy */
-static struct dma_async_tx_descriptor *rza1dma_prep_dma_memcpy(
+/* called through rzadma->dma_device.device_prep_dma_memcpy */
+static struct dma_async_tx_descriptor *rzadma_prep_dma_memcpy(
 	struct dma_chan *chan, dma_addr_t dest, dma_addr_t src,
 	size_t len, unsigned long flags)
 {
-	struct dmac_channel *channel = to_rza1dma_chan(chan);
-	struct rza1dma_engine *rza1dma = channel->rza1dma;
+	struct dmac_channel *channel = to_rzadma_chan(chan);
+	struct rzadma_engine *rzadma = channel->rzadma;
 	struct dmac_desc *desc;
 
-	dev_dbg(rza1dma->dev, "%s channel: %d src=0x%x dst=0x%x len=%d\n",
+	dev_dbg(rzadma->dev, "%s channel: %d src=0x%x dst=0x%x len=%d\n",
 			__func__, channel->nr, src, dest, len);
 
 	if (list_empty(&channel->ld_free))
@@ -871,7 +871,7 @@ static struct dma_async_tx_descriptor *rza1dma_prep_dma_memcpy(
 
 	desc = list_first_entry(&channel->ld_free, struct dmac_desc, node);
 
-	desc->type = RZA1DMA_DESC_MEMCPY;
+	desc->type = RZADMA_DESC_MEMCPY;
 	desc->src = src;
 	desc->dest = dest;
 	desc->len = len;
@@ -882,7 +882,7 @@ static struct dma_async_tx_descriptor *rza1dma_prep_dma_memcpy(
 	return &desc->desc;
 }
 
-static struct dma_chan *rza1dma_of_xlate(struct of_phandle_args *dma_spec,
+static struct dma_chan *rzadma_of_xlate(struct of_phandle_args *dma_spec,
 					   struct of_dma *ofdma)
 {
 	struct dma_chan *chan;
@@ -895,18 +895,18 @@ static struct dma_chan *rza1dma_of_xlate(struct of_phandle_args *dma_spec,
 	dma_cap_zero(mask);
 	dma_cap_set(DMA_SLAVE, mask);
 
-	chan = dma_request_channel(mask, rza1dma_chan_filter, dma_spec);
+	chan = dma_request_channel(mask, rzadma_chan_filter, dma_spec);
 	if (!chan)
 		return NULL;
 
 	return chan;
 }
 
-/* called through rza1dma->dma_device.device_issue_pending */
-static void rza1dma_issue_pending(struct dma_chan *chan)
+/* called through rzadma->dma_device.device_issue_pending */
+static void rzadma_issue_pending(struct dma_chan *chan)
 {
-	struct dmac_channel *channel = to_rza1dma_chan(chan);
-	struct rza1dma_engine *rza1dma = channel->rza1dma;
+	struct dmac_channel *channel = to_rzadma_chan(chan);
+	struct rzadma_engine *rzadma = channel->rzadma;
 	struct dmac_desc *desc;
 	unsigned long flags;
 
@@ -917,8 +917,8 @@ static void rza1dma_issue_pending(struct dma_chan *chan)
 		desc = list_first_entry(&channel->ld_queue,
 					struct dmac_desc, node);
 
-		if (rza1dma_xfer_desc(desc) < 0) {
-			dev_warn(rza1dma->dev,
+		if (rzadma_xfer_desc(desc) < 0) {
+			dev_warn(rzadma->dev,
 				 "%s: channel: %d couldn't issue DMA xfer\n",
 				 __func__, channel->nr);
 		} else {
@@ -929,7 +929,7 @@ static void rza1dma_issue_pending(struct dma_chan *chan)
 	spin_unlock_irqrestore(&channel->lock, flags);
 }
 
-static int rza1dma_parse_of(struct device *dev, struct rza1dma_engine *rza1dma)
+static int rzadma_parse_of(struct device *dev, struct rzadma_engine *rzadma)
 {
 
 	int slave_id[10];
@@ -942,15 +942,15 @@ static int rza1dma_parse_of(struct device *dev, struct rza1dma_engine *rza1dma)
 
 	struct device_node *np = dev->of_node;
 
-	ret = of_property_read_u32(np, "dma-channels", &rza1dma->n_channels);
+	ret = of_property_read_u32(np, "dma-channels", &rzadma->n_channels);
 	if (ret < 0) {
 		dev_err(dev, "unable to read dma-channels property\n");
 		return ret;
 	}
 
-	if (rza1dma->n_channels <= 0 || rza1dma->n_channels >= 100) {
+	if (rzadma->n_channels <= 0 || rzadma->n_channels >= 100) {
 		dev_err(dev, "invalid number of channels %u\n",
-			rza1dma->n_channels);
+			rzadma->n_channels);
 		return -EINVAL;
 	}
 
@@ -979,24 +979,24 @@ static int rza1dma_parse_of(struct device *dev, struct rza1dma_engine *rza1dma)
 	// TODO: change to kzalloc or just hard code in the struct
 	for(i = 0; i < n_slaves; i++)
 	{
-		rza1_dma_slaves[i].slave_id = slave_id[i];
-		rza1_dma_slaves[i].addr = addr_slave[i];
+		rza_dma_slaves[i].slave_id = slave_id[i];
+		rza_dma_slaves[i].addr = addr_slave[i];
 
-		rza1_dma_slaves[i].chcfg.reqd	= chcfg[i*8];
-		rza1_dma_slaves[i].chcfg.loen	= chcfg[i*8+1];
-		rza1_dma_slaves[i].chcfg.hien	= chcfg[i*8+2];
-		rza1_dma_slaves[i].chcfg.lvl	= chcfg[i*8+3];
-		rza1_dma_slaves[i].chcfg.am	= chcfg[i*8+4];
-		rza1_dma_slaves[i].chcfg.sds	= chcfg[i*8+5];
-		rza1_dma_slaves[i].chcfg.dds	= chcfg[i*8+6];
-		rza1_dma_slaves[i].chcfg.tm	= chcfg[i*8+7];
+		rza_dma_slaves[i].chcfg.reqd	= chcfg[i*8];
+		rza_dma_slaves[i].chcfg.loen	= chcfg[i*8+1];
+		rza_dma_slaves[i].chcfg.hien	= chcfg[i*8+2];
+		rza_dma_slaves[i].chcfg.lvl	= chcfg[i*8+3];
+		rza_dma_slaves[i].chcfg.am	= chcfg[i*8+4];
+		rza_dma_slaves[i].chcfg.sds	= chcfg[i*8+5];
+		rza_dma_slaves[i].chcfg.dds	= chcfg[i*8+6];
+		rza_dma_slaves[i].chcfg.tm	= chcfg[i*8+7];
 
-		rza1_dma_slaves[i].dmars.rid	= dmars[i*2];					\
-		rza1_dma_slaves[i].dmars.mid	= dmars[i*2+1];
+		rza_dma_slaves[i].dmars.rid	= dmars[i*2];					\
+		rza_dma_slaves[i].dmars.mid	= dmars[i*2+1];
 	}
 
-	rza1dma->slave = rza1_dma_slaves;
-	rza1dma->slave_num = n_slaves;
+	rzadma->slave = rza_dma_slaves;
+	rzadma->slave_num = n_slaves;
 
 	return 0;
 }
@@ -1006,9 +1006,9 @@ const char irqnames[16][16] = {
 "rza-dma: ch5", "rza-dma: ch6", "rza-dma: ch7", "rza-dma: ch8", "rza-dma: ch9",
 "rza-dma: ch10", "rza-dma: ch11", "rza-dma: ch12", "rza-dma: ch13", "rza-dma: ch14",
 "rza-dma: ch15" };
-static int rza1dma_probe(struct platform_device *pdev)
+static int rzadma_probe(struct platform_device *pdev)
 {
-	struct rza1dma_engine *rza1dma;
+	struct rzadma_engine *rzadma;
 	int channel_num;
 	struct resource *mem;
 	char *irqname;
@@ -1016,28 +1016,28 @@ static int rza1dma_probe(struct platform_device *pdev)
 	int irq;
 	char pdev_irqname[50];
 
-	rza1dma = devm_kzalloc(&pdev->dev, sizeof(*rza1dma), GFP_KERNEL);
-	if (!rza1dma)
+	rzadma = devm_kzalloc(&pdev->dev, sizeof(*rzadma), GFP_KERNEL);
+	if (!rzadma)
 		return -ENOMEM;
 
-	platform_set_drvdata(pdev, rza1dma);
+	platform_set_drvdata(pdev, rzadma);
 
-	ret = rza1dma_parse_of(&pdev->dev, rza1dma);
+	ret = rzadma_parse_of(&pdev->dev, rzadma);
 	if (ret < 0)
 		return ret;
 
-	channel_num = rza1dma->n_channels;
+	channel_num = rzadma->n_channels;
 
 	/* Request resources */
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	rza1dma->base = devm_ioremap_resource(&pdev->dev, mem);
-	if (IS_ERR(rza1dma->base))
-		return PTR_ERR(rza1dma->base);
+	rzadma->base = devm_ioremap_resource(&pdev->dev, mem);
+	if (IS_ERR(rzadma->base))
+		return PTR_ERR(rzadma->base);
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 1);
-	rza1dma->ext_base = devm_ioremap_resource(&pdev->dev, mem);
-	if (IS_ERR(rza1dma->ext_base))
-		return PTR_ERR(rza1dma->ext_base);
+	rzadma->ext_base = devm_ioremap_resource(&pdev->dev, mem);
+	if (IS_ERR(rzadma->ext_base))
+		return PTR_ERR(rzadma->ext_base);
 
 	/* Register interrupt handler for error */
 	irq = platform_get_irq_byname(pdev, "error");
@@ -1047,48 +1047,48 @@ static int rza1dma_probe(struct platform_device *pdev)
 	}
 
 //	irqname = devm_kasprintf(&pdev->dev, GFP_KERNEL, "%s:error",
-//				 dev_name(rza1dma->dev));
+//				 dev_name(rzadma->dev));
 //devm_kasprintf causes crash
 	irqname = "rza-dma: error";
 
 	if (!irqname)
 		return -ENOMEM;
 
-	ret = devm_request_irq(&pdev->dev, irq, rza1dma_irq_handler, 0,
-			       irqname, rza1dma);
+	ret = devm_request_irq(&pdev->dev, irq, rzadma_irq_handler, 0,
+			       irqname, rzadma);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to request IRQ %u (%d)\n",
 			irq, ret);
 		return ret;
 	}
 
-	INIT_LIST_HEAD(&rza1dma->dma_device.channels);
-	dma_cap_set(DMA_SLAVE, rza1dma->dma_device.cap_mask);
-	dma_cap_set(DMA_MEMCPY, rza1dma->dma_device.cap_mask);
-	spin_lock_init(&rza1dma->lock);
+	INIT_LIST_HEAD(&rzadma->dma_device.channels);
+	dma_cap_set(DMA_SLAVE, rzadma->dma_device.cap_mask);
+	dma_cap_set(DMA_MEMCPY, rzadma->dma_device.cap_mask);
+	spin_lock_init(&rzadma->lock);
 
-	rza1dma->channel = devm_kzalloc(&pdev->dev,
+	rzadma->channel = devm_kzalloc(&pdev->dev,
 				sizeof(struct dmac_channel) * channel_num,
 				GFP_KERNEL);
 
 	/* Initialize channel parameters */
 	for (i = 0; i < channel_num; i++) {
-		struct dmac_channel *channel = &rza1dma->channel[i];
+		struct dmac_channel *channel = &rzadma->channel[i];
 		struct lmdesc *lmdesc;
 
-		channel->rza1dma = rza1dma;
+		channel->rzadma = rzadma;
 
 		/* Request the channel interrupt. */
 		sprintf(pdev_irqname, "ch%u", i);
 		irq = platform_get_irq_byname(pdev, pdev_irqname);
 		if (irq < 0) {
-			dev_err(rza1dma->dev, "no IRQ specified for channel %u\n", i);
+			dev_err(rzadma->dev, "no IRQ specified for channel %u\n", i);
 			return -ENODEV;
 		}
 
 		/* save the IRQ ID of channel 0 */
 		if (i == 0)
-			rza1dma->irq = irq;
+			rzadma->irq = irq;
 
 //		irqname = devm_kasprintf(&pdev->dev, GFP_KERNEL, "%s:%u",
 //					 dev_name(&pdev->dev), i);
@@ -1099,15 +1099,15 @@ static int rza1dma_probe(struct platform_device *pdev)
 			return -ENOMEM;
 
 #ifdef THREADED_CALLBACK
-		ret = devm_request_threaded_irq(&pdev->dev, irq, rza1dma_irq_handler,
-				rza1dma_irq_handler_thread, 0, irqnames[i], rza1dma);
-				//rza1dma_irq_handler_thread, 0, dev_name(&pdev->dev), rza1dma);
+		ret = devm_request_threaded_irq(&pdev->dev, irq, rzadma_irq_handler,
+				rzadma_irq_handler_thread, 0, irqnames[i], rzadma);
+				//rzadma_irq_handler_thread, 0, dev_name(&pdev->dev), rzadma);
 #else
-		ret = devm_request_irq(&pdev->dev, irq, rza1dma_irq_handler, 0,
-				dev_name(&pdev->dev), rza1dma);
+		ret = devm_request_irq(&pdev->dev, irq, rzadma_irq_handler, 0,
+				dev_name(&pdev->dev), rzadma);
 #endif
 		if (ret) {
-			dev_err(rza1dma->dev, "failed to request IRQ %u (%d)\n", irq, ret);
+			dev_err(rzadma->dev, "failed to request IRQ %u (%d)\n", irq, ret);
 			return ret;
 		}
 
@@ -1116,22 +1116,22 @@ static int rza1dma_probe(struct platform_device *pdev)
 		INIT_LIST_HEAD(&channel->ld_active);
 
 		spin_lock_init(&channel->lock);
-		tasklet_init(&channel->dma_tasklet, rza1dma_tasklet,
+		tasklet_init(&channel->dma_tasklet, rzadma_tasklet,
 			     (unsigned long)channel);
-		channel->chan.device = &rza1dma->dma_device;
+		channel->chan.device = &rzadma->dma_device;
 		dma_cookie_init(&channel->chan);
 		channel->nr = i;
 
 		/* Set io base address for each channel */
 		if (i < 8) {
-			channel->ch_base = rza1dma->base + CHANNEL_0_7_OFFSET +
+			channel->ch_base = rzadma->base + CHANNEL_0_7_OFFSET +
 						EACH_CHANNEL_OFFSET * i;
-			channel->ch_cmn_base = rza1dma->base +
+			channel->ch_cmn_base = rzadma->base +
 						CHANNEL_0_7_COMMON_BASE;
 		} else {
-			channel->ch_base = rza1dma->base + CHANNEL_8_15_OFFSET	+
+			channel->ch_base = rzadma->base + CHANNEL_8_15_OFFSET	+
 						EACH_CHANNEL_OFFSET * (i - 8);
-			channel->ch_cmn_base = rza1dma->base +
+			channel->ch_cmn_base = rzadma->base +
 						CHANNEL_8_15_COMMON_BASE;
 		}
 		/* Allocate descriptors */
@@ -1146,43 +1146,43 @@ static int rza1dma_probe(struct platform_device *pdev)
 
 		/* Add the channel to the DMAC list */
 		list_add_tail(&channel->chan.device_node,
-			      &rza1dma->dma_device.channels);
+			      &rzadma->dma_device.channels);
 
 		/* Initialize register for each channel */
-		rza1dma_ch_writel(channel, CHCTRL_DEFAULT, CHCTRL, 1);
+		rzadma_ch_writel(channel, CHCTRL_DEFAULT, CHCTRL, 1);
 	}
 
 	/* Register the DMAC as a DMA provider for DT. */
-	if (of_dma_controller_register(pdev->dev.of_node, rza1dma_of_xlate,
+	if (of_dma_controller_register(pdev->dev.of_node, rzadma_of_xlate,
 				       NULL) < 0 )
 		dev_err(&pdev->dev, "unable to register as provider provider for DT\n");
 
 	/* Initialize register for all channels */
-	rza1dma_writel(rza1dma, DCTRL_DEFAULT, CHANNEL_0_7_COMMON_BASE	+ DCTRL);
-	rza1dma_writel(rza1dma, DCTRL_DEFAULT, CHANNEL_8_15_COMMON_BASE + DCTRL);
+	rzadma_writel(rzadma, DCTRL_DEFAULT, CHANNEL_0_7_COMMON_BASE	+ DCTRL);
+	rzadma_writel(rzadma, DCTRL_DEFAULT, CHANNEL_8_15_COMMON_BASE + DCTRL);
 
-	rza1dma->dev = &pdev->dev;
-	rza1dma->dma_device.dev = &pdev->dev;
+	rzadma->dev = &pdev->dev;
+	rzadma->dma_device.dev = &pdev->dev;
 
-	rza1dma->dma_device.device_alloc_chan_resources = rza1dma_alloc_chan_resources;
-	rza1dma->dma_device.device_free_chan_resources = rza1dma_free_chan_resources;
-	rza1dma->dma_device.device_tx_status = rza1dma_tx_status;
-	rza1dma->dma_device.device_prep_slave_sg = rza1dma_prep_slave_sg;
-	rza1dma->dma_device.device_prep_dma_memcpy = rza1dma_prep_dma_memcpy;
-	rza1dma->dma_device.device_config = rza1dma_config;
-	rza1dma->dma_device.device_terminate_all = rza1dma_terminate_all;
-	rza1dma->dma_device.device_issue_pending = rza1dma_issue_pending;
+	rzadma->dma_device.device_alloc_chan_resources = rzadma_alloc_chan_resources;
+	rzadma->dma_device.device_free_chan_resources = rzadma_free_chan_resources;
+	rzadma->dma_device.device_tx_status = rzadma_tx_status;
+	rzadma->dma_device.device_prep_slave_sg = rzadma_prep_slave_sg;
+	rzadma->dma_device.device_prep_dma_memcpy = rzadma_prep_dma_memcpy;
+	rzadma->dma_device.device_config = rzadma_config;
+	rzadma->dma_device.device_terminate_all = rzadma_terminate_all;
+	rzadma->dma_device.device_issue_pending = rzadma_issue_pending;
 
-	platform_set_drvdata(pdev, rza1dma);
+	platform_set_drvdata(pdev, rzadma);
 
-	rza1dma->dma_device.copy_align = 0; /* Set copy_align to zero for net_dma_find_channel
+	rzadma->dma_device.copy_align = 0; /* Set copy_align to zero for net_dma_find_channel
 					     * func to run well. But it might cause problems.
 					     */
-	rza1dma->dma_device.copy_align = 0;
-	rza1dma->dma_device.dev->dma_parms = &rza1dma->dma_parms;
-	dma_set_max_seg_size(rza1dma->dma_device.dev, 0xffffff);
+	rzadma->dma_device.copy_align = 0;
+	rzadma->dma_device.dev->dma_parms = &rzadma->dma_parms;
+	dma_set_max_seg_size(rzadma->dma_device.dev, 0xffffff);
 
-	ret = dma_async_device_register(&rza1dma->dma_device);
+	ret = dma_async_device_register(&rzadma->dma_device);
 	if (ret) {
 		dev_err(&pdev->dev, "unable to register\n");
 		goto err;
@@ -1192,17 +1192,17 @@ err:
 	return ret;
 }
 
-static int __exit rza1dma_remove(struct platform_device *pdev)
+static int __exit rzadma_remove(struct platform_device *pdev)
 {
-	struct rza1dma_engine *rza1dma = platform_get_drvdata(pdev);
-	int i, channel_num = rza1dma->n_channels;
+	struct rzadma_engine *rzadma = platform_get_drvdata(pdev);
+	int i, channel_num = rzadma->n_channels;
 
 	of_dma_controller_free(pdev->dev.of_node);
-	dma_async_device_unregister(&rza1dma->dma_device);
+	dma_async_device_unregister(&rzadma->dma_device);
 
 	/* free allocated resources */
 	for (i = 0; i < channel_num; i++) {
-		struct dmac_channel *channel = &rza1dma->channel[i];
+		struct dmac_channel *channel = &rzadma->channel[i];
 
 		dma_free_coherent(NULL,
 				sizeof(struct lmdesc) * DMAC_NR_LMDESC,
@@ -1213,26 +1213,26 @@ static int __exit rza1dma_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static struct of_device_id of_rza1dma_match[] = {
+static struct of_device_id of_rzadma_match[] = {
 	{.compatible = "renesas,rza-dma"},
 	{},
 };
-MODULE_DEVICE_TABLE(of, of_rza1dma_match);
+MODULE_DEVICE_TABLE(of, of_rzadma_match);
 
-static struct platform_driver rza1dma_driver = {
+static struct platform_driver rzadma_driver = {
 	.driver		= {
 		.name	= "rza-dma",
-		.of_match_table = of_rza1dma_match,
+		.of_match_table = of_rzadma_match,
 	},
-	.probe 		= rza1dma_probe,
-	.remove		= __exit_p(rza1dma_remove),
+	.probe 		= rzadma_probe,
+	.remove		= __exit_p(rzadma_remove),
 };
 
-static int rza1dma_init(void)
+static int rzadma_init(void)
 {
-	return platform_driver_register(&rza1dma_driver);
+	return platform_driver_register(&rzadma_driver);
 }
-subsys_initcall(rza1dma_init);
+subsys_initcall(rzadma_init);
 
 MODULE_AUTHOR("Renesas Electronics");
 MODULE_DESCRIPTION("Renesas RZA DMA Engine driver");
