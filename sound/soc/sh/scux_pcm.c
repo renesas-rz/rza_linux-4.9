@@ -537,6 +537,9 @@ static int scu_audio_stop(struct snd_pcm_substream *ss)
 	/* dma channel release */
 	ret = scu_dmae_release(ss);
 
+	/* Cancel work queue */
+	cancel_work_sync(&pcminfo->work);
+
 	FNC_EXIT
 	return ret;
 }
