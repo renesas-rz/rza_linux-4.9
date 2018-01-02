@@ -407,3 +407,29 @@
 };
 #endif
 
+/* ========== USB Function Testing ========== */
+/* This uses the USB Ethernet gadget for testing.
+ * Therefore, make sure to set
+ *	CONFIG_USB_RENESAS_USBHS=y
+ *	CONFIG_USB_RENESAS_USBHS_UDC=y
+ * 	CONFIG_USB_ETH=y
+ * 	CONFIG_USB_ETH_RNDIS=y
+ * in your kernel config.
+ *
+ * On the RSK board make sure you set : JP11 = Open
+ */
+#if 0
+&usbhost0 {
+	status = "disabled";
+};
+
+&usbhost1 {
+	status = "disabled";
+};
+
+&usbhs0 {
+	status = "okay";
+	xtal-48mhz;	/* We have a dedicated 48MHz crystal for USB */
+	//xtal-12mhz;	/* We are using the main 12MHz crystal for USB */
+};
+#endif
