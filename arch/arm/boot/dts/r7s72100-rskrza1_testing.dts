@@ -429,7 +429,5 @@
 
 &usbhs0 {
 	status = "okay";
-	xtal-48mhz;	/* We have a dedicated 48MHz crystal for USB */
-	//xtal-12mhz;	/* We are using the main 12MHz crystal for USB */
 };
 #endif
