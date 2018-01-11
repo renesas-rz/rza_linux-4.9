@@ -294,7 +294,7 @@
 	};
 };
 
-/* RIIC1 (I2C Touchscreen example) */
+/* RIIC1 (Touchscreen, Accelerometer) */
 &i2c1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c1_pins>;
@@ -312,6 +312,19 @@
 
 		touchscreen-size-x = <480>;
 		touchscreen-size-y = <272>;
+	};
+
+	/* Bosch  Digital, triaxial acceleration sensor */
+	/* Requries CONFIG_BMA180=y */
+	/* to read:
+	 * X axis: $ hexdump /sys/bus/iio/devices/iio:device0/in_accel_x_raw
+	 * Y axis: $ hexdump /sys/bus/iio/devices/iio:device0/in_accel_y_raw
+	 * Z axis: $ hexdump /sys/bus/iio/devices/iio:device0/in_accel_z_raw
+	 *   temp: $ hexdump /sys/bus/iio/devices/iio:device0/in_temp_raw
+	bma250@18 {
+		compatible = "bosch,bma250";
+			reg = <0x18>;
+			//interrupts = <x x IRQ_TYPE_EDGE_RISING>;	/* not connected */
 	};
 };
 
