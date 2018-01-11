@@ -287,6 +287,10 @@
 	status = "okay";
 	clock-frequency = <400000>;
 
+	/* CAT24C02 EEPROM */
+	/* 'eeprom' will show up under:
+	 * /sys/bus/i2c/devices/0-0050/
+	 */
 	at24@50 {
 		compatible = "at24,24c02";
 		pagesize = <16>;
