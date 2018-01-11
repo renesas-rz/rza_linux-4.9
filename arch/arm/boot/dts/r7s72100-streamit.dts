@@ -280,6 +280,20 @@
 	xtal-48mhz;
 };
 
+/* RIIC0 (EEPROM) */
+&i2c0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c0_pins>;
+	status = "okay";
+	clock-frequency = <400000>;
+
+	at24@50 {
+		compatible = "at24,24c02";
+		pagesize = <16>;
+		reg = <0x50>;
+	};
+};
+
 /* RIIC1 (I2C Touchscreen example) */
 &i2c1 {
 	pinctrl-names = "default";
