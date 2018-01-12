@@ -325,6 +325,7 @@
 	 * Y axis: $ hexdump /sys/bus/iio/devices/iio:device0/in_accel_y_raw
 	 * Z axis: $ hexdump /sys/bus/iio/devices/iio:device0/in_accel_z_raw
 	 *   temp: $ hexdump /sys/bus/iio/devices/iio:device0/in_temp_raw
+	 */
 	bma250@18 {
 		compatible = "bosch,bma250";
 			reg = <0x18>;
