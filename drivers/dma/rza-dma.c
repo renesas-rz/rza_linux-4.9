@@ -530,7 +530,7 @@ static void prepare_descs_for_slave_sg(struct dmac_desc *d)
 	channel->chcfg = chcfg;			/* save */
 	channel->per_address = slave->addr;	/* slave device address */
 
-	spin_lock_irqsave(&channel->lock, flags);
+	raw_spin_lock_irqsave(&channel->lock, flags);
 
 	/* Prepare descriptors */
 	lmdesc = channel->lmdesc.tail;
@@ -573,7 +573,7 @@ static void prepare_descs_for_slave_sg(struct dmac_desc *d)
 
 	channel->chctrl = CHCTRL_SETEN;		/* always */
 
-	spin_unlock_irqrestore(&channel->lock, flags);
+	raw_spin_unlock_irqrestore(&channel->lock, flags);
 
 }
 
@@ -623,7 +623,7 @@ static void rzadma_tasklet(unsigned long data)
 	dev_dbg(rzadma->dev, "%s called\n", __func__);
 
 	/* Protection of critical section */
-	spin_lock_irqsave(&channel->lock, flags);
+	raw_spin_lock_irqsave(&channel->lock, flags);
 
 	if (list_empty(&channel->ld_active)) {
 		/* Someone might have called terminate all */
@@ -657,7 +657,7 @@ static void rzadma_tasklet(unsigned long data)
 		}
 	}
 out:
-	spin_unlock_irqrestore(&channel->lock, flags);
+	raw_spin_unlock_irqrestore(&channel->lock, flags);
 #ifdef THREADED_CALLBACK
 	dmaengine_desc_get_callback_invoke(&desc->desc, NULL);
 #endif
@@ -682,10 +682,10 @@ static int rzadma_terminate_all(struct dma_chan *chan)
 	struct rzadma_engine *rzadma = rzadmac->rzadma;
 	unsigned long flags;
 	rzadma_disable_hw(rzadmac);
-	spin_lock_irqsave(&rzadma->lock, flags);
+	raw_spin_lock_irqsave(&rzadma->lock, flags);
 	list_splice_tail_init(&rzadmac->ld_active, &rzadmac->ld_free);
 	list_splice_tail_init(&rzadmac->ld_queue, &rzadmac->ld_free);
-	spin_unlock_irqrestore(&rzadma->lock, flags);
+	raw_spin_unlock_irqrestore(&rzadma->lock, flags);
 	return 0;
 }
 
@@ -742,10 +742,10 @@ static dma_cookie_t rzadma_tx_submit(struct dma_async_tx_descriptor *tx)
 	dma_cookie_t cookie;
 	unsigned long flags;
 
-	spin_lock_irqsave(&channel->lock, flags);
+	raw_spin_lock_irqsave(&channel->lock, flags);
 	list_move_tail(channel->ld_free.next, &channel->ld_queue);
 	cookie = dma_cookie_assign(tx);
-	spin_unlock_irqrestore(&channel->lock, flags);
+	raw_spin_unlock_irqrestore(&channel->lock, flags);
 
 	return cookie;
 }
@@ -798,7 +798,7 @@ static void rzadma_free_chan_resources(struct dma_chan *chan)
 	unsigned long flags;
 	unsigned int i;
 
-	spin_lock_irqsave(&channel->lock, flags);
+	raw_spin_lock_irqsave(&channel->lock, flags);
 
 	for (i = 0; i < DMAC_NR_LMDESC; i++) {
 		lmdesc[i].header = 0;
@@ -808,7 +808,7 @@ static void rzadma_free_chan_resources(struct dma_chan *chan)
 	list_splice_tail_init(&channel->ld_active, &channel->ld_free);
 	list_splice_tail_init(&channel->ld_queue, &channel->ld_free);
 
-	spin_unlock_irqrestore(&channel->lock, flags);
+	raw_spin_unlock_irqrestore(&channel->lock, flags);
 
 	list_for_each_entry_safe(desc, _desc, &channel->ld_free, node) {
 		kfree(desc);
@@ -910,7 +910,7 @@ static void rzadma_issue_pending(struct dma_chan *chan)
 	struct dmac_desc *desc;
 	unsigned long flags;
 
-	spin_lock_irqsave(&channel->lock, flags);
+	raw_spin_lock_irqsave(&channel->lock, flags);
 
 	/* queue is piled up on the next active even during execution DMA forwarding */
 	if (!list_empty(&channel->ld_queue)) {
@@ -926,7 +926,7 @@ static void rzadma_issue_pending(struct dma_chan *chan)
 				       &channel->ld_active);
 		}
 	}
-	spin_unlock_irqrestore(&channel->lock, flags);
+	raw_spin_unlock_irqrestore(&channel->lock, flags);
 }
 
 static int rzadma_parse_of(struct device *dev, struct rzadma_engine *rzadma)
