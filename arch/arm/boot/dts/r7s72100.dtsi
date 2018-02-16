@@ -765,6 +765,28 @@
 /*		dma-mask = <0>; */
 	};
 
+	usbhs0: usbhs@e8010000 {
+		compatible = "renesas,r7s72100-usbhs";
+		reg = <0xe8010000 0x1A0>;
+		interrupts = <GIC_SPI (73-32) IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&mstp7_clks R7S72100_CLK_USB0>;
+		renesas,buswait = <4>;
+		power-domains = <&cpg_clocks>;
+		status = "disabled";
+		/* dma-mask = <0>; */
+	};
+
+	usbhs1: usbhs@e8207000 {
+		compatible = "renesas,r7s72100-usbhs";
+		reg = <0xe8207000 0x1A0>;
+		interrupts = <GIC_SPI (74-32) IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&mstp7_clks R7S72100_CLK_USB1>;
+		renesas,buswait = <4>;
+		power-domains = <&cpg_clocks>;
+		status = "disabled";
+		/* dma-mask = <0>; */
+	};
+
 	vdc50: display@fcff7400 {
 		compatible = "renesas,r7s72100-vdc5fb";
 		reg = <0xfcff7400 0x00000700>,

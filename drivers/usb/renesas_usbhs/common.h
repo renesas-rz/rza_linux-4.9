@@ -107,6 +107,9 @@ struct usbhs_priv;
 #define D2FIFOCTR	0x00F2	/* for R-Car Gen2 */
 #define D3FIFOSEL	0x00F4	/* for R-Car Gen2 */
 #define D3FIFOCTR	0x00F6	/* for R-Car Gen2 */
+#define SUSPMODE0	0x0102	/* for RZ/A */
+#define SUSPM		(1 << 14)
+
 
 /* SYSCFG */
 #define SCKE	(1 << 10)	/* USB Module Clock Enable */
@@ -115,6 +118,8 @@ struct usbhs_priv;
 #define DRPD	(1 << 5)	/* D+ Line/D- Line Resistance Control */
 #define DPRPU	(1 << 4)	/* D+ Line Resistance Control */
 #define USBE	(1 << 0)	/* USB Module Operation Enable */
+#define UCKSEL	(1 << 2)	/* Clock Select for RZ/A1 */
+#define UPLLE	(1 << 1)	/* USB PLL Enable for RZ/A1 */
 
 /* DVSTCTR */
 #define EXTLP	(1 << 10)	/* Controls the EXTLP pin output state */

@@ -42,6 +42,12 @@ config SND_SOC_RCAR
 	help
 	  This option enables R-Car SRU/SCU/SSIU/SSI sound support
 
+config SND_SOC_SCUX
+	tristate
+	depends on ARCH_R7S72100
+	select DMA_ENGINE
+	select DMADEVICES
+
 ##
 ## Boards
 ##
@@ -62,5 +68,17 @@ config SND_SIU_MIGOR
 	select SND_SOC_WM8978
 	help
 	  This option enables sound support for the SH7722 Migo-R board
+
+config SND_SCUX_RSKRZA1
+	tristate "SCUX sound support on RSK-RZA1"
+	depends on ARCH_R7S72100
+	select SND_SOC_SCUX
+	select SND_SOC_MAX9856
+
+	help
+	  Enable sound support for the RSK-RZA1 board.
+	  This is supported to the Renesas SCUX peripheral.
+	  Say Y here if you have enabled, otherwise say N.
+	  To compile this driver as a module, say M.
 
 endmenu

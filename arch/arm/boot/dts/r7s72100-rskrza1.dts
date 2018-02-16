@@ -305,6 +305,12 @@
 	pinctrl-0 = <&i2c3_pins>;
 	status = "okay";
 	clock-frequency = <100000>;
+
+	max9856: codec@10 {
+		compatible = "renesas,max9856_codec";
+		#sound-dai-cells = <0>;
+		reg = <0x10>;
+	};
 };
 
 &usbhost0 {
@@ -390,3 +396,23 @@
 	};
 };
 
+/* Audio in/out */
+/* requires
+ * CONFIG_SOUND=y
+ * CONFIG_SND=y
+ * CONFIG_SND_SOC=y
+ * CONFIG_SND_SCUX_RSKRZA1=y
+ * CONFIG_RZA_DMA=y
+ */
+/ {
+	sound_machine: sound@0 {
+		compatible = "renesas,rskrza1_sound_alsa";
+	};
+
+	sound: scux-pcm-audio@e8208000 {
+		compatible = "renesas,rskrza1_scux";
+		reg = <0xe8208000 0x00001778>,
+		      <0xe820b000 0x00002830>;
+		channel = <0>;
+	};
+};

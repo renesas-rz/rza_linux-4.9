@@ -26,6 +26,7 @@
 #include "common.h"
 #include "rcar2.h"
 #include "rcar3.h"
+#include "rza.h"
 
 /*
  *		image of renesas_usbhs
@@ -493,6 +494,14 @@ static const struct of_device_id usbhs_of_match[] = {
 		.compatible = "renesas,rcar-gen3-usbhs",
 		.data = (void *)USBHS_TYPE_RCAR_GEN3,
 	},
+	{
+		.compatible = "renesas,r7s72100-usbhs",
+		.data = (void *)USBHS_TYPE_RZA1,
+	},
+	{
+		.compatible = "renesas,rza1-usbhs",
+		.data = (void *)USBHS_TYPE_RZA1,
+	},
 	{ },
 };
 MODULE_DEVICE_TABLE(of, usbhs_of_match);
@@ -519,7 +528,8 @@ static struct renesas_usbhs_platform_info *usbhs_parse_dt(struct device *dev)
 		dparam->enable_gpio = gpio;
 
 	if (dparam->type == USBHS_TYPE_RCAR_GEN2 ||
-	    dparam->type == USBHS_TYPE_RCAR_GEN3)
+	    dparam->type == USBHS_TYPE_RCAR_GEN3 ||
+	    dparam->type == USBHS_TYPE_RZA1)
 		dparam->has_usb_dmac = 1;
 
 	return info;
@@ -584,6 +594,13 @@ static int usbhs_probe(struct platform_device *pdev)
 		break;
 	case USBHS_TYPE_RCAR_GEN3:
 		priv->pfunc = usbhs_rcar3_ops;
+		if (!priv->dparam.pipe_configs) {
+			priv->dparam.pipe_configs = usbhsc_new_pipe;
+			priv->dparam.pipe_size = ARRAY_SIZE(usbhsc_new_pipe);
+		}
+		break;
+	case USBHS_TYPE_RZA1:
+		priv->pfunc = usbhs_rza1_ops;
 		if (!priv->dparam.pipe_configs) {
 			priv->dparam.pipe_configs = usbhsc_new_pipe;
 			priv->dparam.pipe_size = ARRAY_SIZE(usbhsc_new_pipe);

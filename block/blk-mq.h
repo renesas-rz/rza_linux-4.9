@@ -50,6 +50,7 @@ static inline struct blk_mq_hw_ctx *blk_mq_map_queue(struct request_queue *q,
 /*
  * sysfs helpers
  */
+extern void blk_mq_sysfs_init(struct request_queue *q);
 extern int blk_mq_sysfs_register(struct request_queue *q);
 extern void blk_mq_sysfs_unregister(struct request_queue *q);
 extern void blk_mq_hctx_kobj_init(struct blk_mq_hw_ctx *hctx);
@@ -72,12 +73,12 @@ static inline struct blk_mq_ctx *__blk_mq_get_ctx(struct request_queue *q,
  */
 static inline struct blk_mq_ctx *blk_mq_get_ctx(struct request_queue *q)
 {
-	return __blk_mq_get_ctx(q, get_cpu());
+	return __blk_mq_get_ctx(q, get_cpu_light());
 }
 
 static inline void blk_mq_put_ctx(struct blk_mq_ctx *ctx)
 {
-	put_cpu();
+	put_cpu_light();
 }
 
 struct blk_mq_alloc_data {

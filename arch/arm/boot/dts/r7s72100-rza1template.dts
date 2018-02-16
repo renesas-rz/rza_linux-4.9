@@ -304,6 +304,8 @@
 &scif2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&scif2_pins>;
+
+	//uart-has-rtscts;	/* uncomment to use RTS/CTS, but you will also need to set up the pins */
 	status = "okay";
 };
 
