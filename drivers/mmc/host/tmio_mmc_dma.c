@@ -24,7 +24,7 @@
 
 void tmio_mmc_enable_dma(struct tmio_mmc_host *host, bool enable)
 {
-	if (!host->chan_tx || !host->chan_rx)
+	if (!host->chan_tx && !host->chan_rx)
 		return;
 
 	if (host->dma->enable)
@@ -98,6 +98,7 @@ static void tmio_mmc_start_dma_rx(struct tmio_mmc_host *host)
 
 	if (sg->length < TMIO_MMC_MIN_DMA_LEN) {
 		host->force_pio = true;
+		tmio_mmc_enable_dma(host, false);
 		return;
 	}
 
@@ -172,6 +173,7 @@ static void tmio_mmc_start_dma_tx(struct tmio_mmc_host *host)
 
 	if (sg->length < TMIO_MMC_MIN_DMA_LEN) {
 		host->force_pio = true;
+		tmio_mmc_enable_dma(host, false);
 		return;
 	}
 
