@@ -29,7 +29,7 @@ static int __init genmai_pinmux_init(void)
 		enum { LOW_LEVEL=0, FALLING_EDGE, RISING_EDGE, BOTH_EDGE };
 		#define TOUCHSCREEN_IRQ 1
 
-		void __iomem *irc1 = ioremap_nocache(arch/arm/configs/0xfcfef802, 0x2);
+		void __iomem *irc1 = ioremap_nocache(0xfcfef802, 0x2);
 		u16 val;
 		val = readw(irc1);
 		val &= ~(0x3 << (TOUCHSCREEN_IRQ * 2));
