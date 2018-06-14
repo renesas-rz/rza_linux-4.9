@@ -558,8 +558,8 @@ static int vdc5fb_init_sync(struct vdc5fb_priv *priv)
 	 * from scaler 0 is used by all scalers.
 	 * (TODO) External input vsync is not supported.
 	 */
-	tmp = SC_RES_FH(priv->res_fh);
-	tmp |= SC_RES_FV(priv->res_fv);
+	tmp = SC_RES_FH(priv->res_fh - 1);
+	tmp |= SC_RES_FV(priv->res_fv - 1);
 	vdc5fb_write(priv, SC0_SCL0_FRC4, tmp);
 	vdc5fb_write(priv, SC1_SCL0_FRC4, tmp);
 	tmp = (SC_RES_FLD_DLY_SEL | SC_RES_VSDLY(1));
