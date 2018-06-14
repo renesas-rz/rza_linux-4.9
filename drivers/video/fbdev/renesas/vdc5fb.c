@@ -868,17 +868,21 @@ static int vdc5fb_init_outcnt(struct vdc5fb_priv *priv)
  * job (like HSYNC). But, starting in VDC4 (or maybe it was VDC3), you could
  * configure *any* TCON for *any* LCD signal.
  *
+ * The TCON_xxx_SEL[2:0] bits in the TCON_TIM_xxx2 registers are completely
+ * independent of the TCON_TIM_xxx1 registers.
+ *
  */
 static int vdc5fb_init_tcon(struct vdc5fb_priv *priv)
 {
-	static const unsigned char tcon_sel[LCD_MAX_TCON]
-		= { 0, 1, 2, 7, 4, 5, 6, };
+//	static const unsigned char tcon_sel[LCD_MAX_TCON]
+//		= { 0, 1, 2, 7, 4, 5, 6, };
 	struct fb_videomode *mode = priv->videomode;
 	struct vdc5fb_pdata *pdata = priv_to_pdata(priv);
 	u32 vs_s, vs_w, ve_s, ve_w;
 	u32 hs_s, hs_w, he_s, he_w;
 	u32 tmp1, tmp2;
 
+	/* Data Enable */
 	tmp1 = TCON_OFFSET(0);
 	tmp1 |= TCON_HALF(priv->res_fh / 2);
 	vdc5fb_write(priv, TCON_TIM, tmp1);
@@ -888,86 +892,76 @@ static int vdc5fb_init_tcon(struct vdc5fb_priv *priv)
 #endif
 	vdc5fb_write(priv, TCON_TIM_DE, tmp2);
 
+	/* Vertical Sync (VSYNC) pulse to start frame */
+	/* when should go active, and for how long */
 	vs_s = (2 * 0);
 	vs_w = (2 * mode->vsync_len);
-	ve_s = (2 * (mode->vsync_len + mode->upper_margin));
-	ve_w = (2 * priv->panel_pixel_yres);
-
 	tmp1 = TCON_VW(vs_w);
 	tmp1 |= TCON_VS(vs_s);
 	vdc5fb_write(priv, TCON_TIM_STVA1, tmp1);
-	if (pdata->tcon_sel[LCD_TCON0] == TCON_SEL_UNUSED)
-		tmp2 = TCON_SEL(tcon_sel[LCD_TCON0]);
-	else
-		tmp2 = TCON_SEL(pdata->tcon_sel[LCD_TCON0]);
+	tmp2  = 0;
 	if (!(mode->sync & FB_SYNC_VERT_HIGH_ACT))
 		tmp2 |= TCON_INV;
 	vdc5fb_write(priv, TCON_TIM_STVA2, tmp2);
 
+	/* Vertical Enable Signal (only active when pixel data) */
+	/* when should go active, and for how long */
+	ve_s = (2 * (mode->vsync_len + mode->upper_margin));
+	ve_w = (2 * priv->panel_pixel_yres);
 	tmp1 = TCON_VW(ve_w);
 	tmp1 |= TCON_VS(ve_s);
 	vdc5fb_write(priv, TCON_TIM_STVB1, tmp1);
-	if (pdata->tcon_sel[LCD_TCON1] == TCON_SEL_UNUSED)
-		tmp2 = TCON_SEL(tcon_sel[LCD_TCON1]);
-	else
-		tmp2 = TCON_SEL(pdata->tcon_sel[LCD_TCON1]);
+	tmp2  = 0;
 #if 0
 	tmp2 |= TCON_INV;
 #endif
 	vdc5fb_write(priv, TCON_TIM_STVB2, tmp2);
 
+	/* Horizontal Sync (HSYNC) pulse to start line */
+	/* when should go active, and for how long */
 	hs_s = 0;
 	hs_w = mode->hsync_len;
-	he_s = (mode->hsync_len + mode->left_margin);
-	he_w = priv->panel_pixel_xres;
-
 	tmp1 = TCON_HW(hs_w);
 	tmp1 |= TCON_HS(hs_s);
 	vdc5fb_write(priv, TCON_TIM_STH1, tmp1);
-	if (pdata->tcon_sel[LCD_TCON2] == TCON_SEL_UNUSED)
-		tmp2 = TCON_SEL(tcon_sel[LCD_TCON2]);
-	else
-		tmp2 = TCON_SEL(pdata->tcon_sel[LCD_TCON2]);
-	if (!(mode->sync & FB_SYNC_HOR_HIGH_ACT))
-		tmp2 |= TCON_INV;
+	tmp2  = 0;
 #if 0
 	tmp2 |= TCON_HS_SEL;
 #endif
+	if (!(mode->sync & FB_SYNC_HOR_HIGH_ACT))
+		tmp2 |= TCON_INV;
 	vdc5fb_write(priv, TCON_TIM_STH2, tmp2);
 
+	/* Horizontal Enable Signal (only active when pixel data) */
+	/* when should go active, and for how long */
+	he_s = (mode->hsync_len + mode->left_margin);
+	he_w = priv->panel_pixel_xres;
 	tmp1 = TCON_HW(he_w);
 	tmp1 |= TCON_HS(he_s);
 	vdc5fb_write(priv, TCON_TIM_STB1, tmp1);
-	if (pdata->tcon_sel[LCD_TCON3] == TCON_SEL_UNUSED)
-		tmp2 = TCON_SEL(tcon_sel[LCD_TCON3]);
-	else
-		tmp2 = TCON_SEL(pdata->tcon_sel[LCD_TCON3]);
+	tmp2  = 0;
 #if 0
 	tmp2 |= TCON_INV;
 	tmp2 |= TCON_HS_SEL;
 #endif
 	vdc5fb_write(priv, TCON_TIM_STB2, tmp2);
 
+	/* CPV Signal Pulse */
 	tmp1 = TCON_HW(hs_w);
 	tmp1 |= TCON_HS(hs_s);
 	vdc5fb_write(priv, TCON_TIM_CPV1, tmp1);
-	if (pdata->tcon_sel[LCD_TCON4] == TCON_SEL_UNUSED)
-		tmp2 = TCON_SEL(tcon_sel[LCD_TCON4]);
-	else
-		tmp2 = TCON_SEL(pdata->tcon_sel[LCD_TCON4]);
+	tmp2  = 0;
 #if 0
 	tmp2 |= TCON_INV;
 	tmp2 |= TCON_HS_SEL;
 #endif
 	vdc5fb_write(priv, TCON_TIM_CPV2, tmp2);
 
+	/* POLA Signal Pulse */
 	tmp1 = TCON_HW(he_w);
 	tmp1 |= TCON_HS(he_s);
 	vdc5fb_write(priv, TCON_TIM_POLA1, tmp1);
-	if (pdata->tcon_sel[LCD_TCON5] == TCON_SEL_UNUSED)
-		tmp2 = TCON_SEL(tcon_sel[LCD_TCON5]);
-	else
-		tmp2 = TCON_SEL(pdata->tcon_sel[LCD_TCON5]);
+	tmp2  = 0;
 #if 0
 	tmp2 |= TCON_HS_SEL;
 	tmp2 |= TCON_INV;
@@ -975,19 +969,67 @@ static int vdc5fb_init_tcon(struct vdc5fb_priv *priv)
 #endif
 	vdc5fb_write(priv, TCON_TIM_POLA2, tmp2);
 
+	/* POLB Signal Pulse */
 	tmp1 = TCON_HW(he_w);
 	tmp1 |= TCON_HS(he_s);
 	vdc5fb_write(priv, TCON_TIM_POLB1, tmp1);
-	if (pdata->tcon_sel[LCD_TCON6] == TCON_SEL_UNUSED)
-		tmp2 = TCON_SEL(tcon_sel[LCD_TCON6]);
-	else
-		tmp2 = TCON_SEL(pdata->tcon_sel[LCD_TCON6]);
+	tmp2  = 0;
 #if 0
 	tmp2 |= TCON_INV;
 	tmp2 |= TCON_HS_SEL;
 	tmp2 |= TCON_MD;
 #endif
 	vdc5fb_write(priv, TCON_TIM_POLB2, tmp2);
+
+	/* LCD_TCON0 pin */
+	if (pdata->tcon_sel[LCD_TCON0] != TCON_SEL_UNUSED) {
+		tmp2 = vdc5fb_read(priv, TCON_TIM_STVA2);
+		tmp2 |= TCON_SEL(pdata->tcon_sel[LCD_TCON0]);
+		vdc5fb_write(priv, TCON_TIM_STVA2, tmp2);
+	}
+
+	/* LCD_TCON1 pin */
+	if (pdata->tcon_sel[LCD_TCON1] != TCON_SEL_UNUSED) {
+		tmp2 = vdc5fb_read(priv, TCON_TIM_STVB2);
+		tmp2 |= TCON_SEL(pdata->tcon_sel[LCD_TCON1]);
+		vdc5fb_write(priv, TCON_TIM_STVB2, tmp2);
+	}
+
+
+	/* LCD_TCON2 pin */
+	if (pdata->tcon_sel[LCD_TCON2] != TCON_SEL_UNUSED) {
+		tmp2 = vdc5fb_read(priv, TCON_TIM_STH2);
+		tmp2 |= TCON_SEL(pdata->tcon_sel[LCD_TCON2]);
+		vdc5fb_write(priv, TCON_TIM_STH2, tmp2);
+	}
+
+	/* LCD_TCON3 pin */
+	if (pdata->tcon_sel[LCD_TCON3] != TCON_SEL_UNUSED) {
+		tmp2 = vdc5fb_read(priv, TCON_TIM_STB2);
+		tmp2 |= TCON_SEL(pdata->tcon_sel[LCD_TCON3]);
+		vdc5fb_write(priv, TCON_TIM_STB2, tmp2);
+	}
+
+	/* LCD_TCON4 pin */
+	if (pdata->tcon_sel[LCD_TCON4] != TCON_SEL_UNUSED) {
+		tmp2 = vdc5fb_read(priv, TCON_TIM_CPV2);
+		tmp2 |= TCON_SEL(pdata->tcon_sel[LCD_TCON4]);
+		vdc5fb_write(priv, TCON_TIM_CPV2, tmp2);
+	}
+
+	/* LCD_TCON5 pin */
+	if (pdata->tcon_sel[LCD_TCON5] != TCON_SEL_UNUSED) {
+		tmp2 = vdc5fb_read(priv, TCON_TIM_POLA2);
+		tmp2 |= TCON_SEL(pdata->tcon_sel[LCD_TCON5]);
+		vdc5fb_write(priv, TCON_TIM_POLA2, tmp2);
+	}
+
+	/* LCD_TCON6 pin */
+	if (pdata->tcon_sel[LCD_TCON6] != TCON_SEL_UNUSED) {
+		tmp2 = vdc5fb_read(priv, TCON_TIM_POLB2);
+		tmp2 |= TCON_SEL(pdata->tcon_sel[LCD_TCON6]);
+		vdc5fb_write(priv, TCON_TIM_POLB2, tmp2);
+	}
 
 	return 0;
 }
