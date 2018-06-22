@@ -1050,7 +1050,8 @@ static const char *irq_names[VDC5FB_MAX_IRQS] = {
 #define	D_GR_BASE		GBR888(0, 0, 0)
 
 /* OUT_CLK_PHASE */
-#define	D_OUT_CLK_PHASE		0
+#define OUTCNT_LCD_EDGE(x)	(((x) & 0x1u) << 8)
+
 /* OUT_BRIGHT1, OUT_BRIGHT2 */
 #define	PBRT_G(x)		(((x) & 0x3ffu) << 0)
 #define	PBRT_B(x)		(((x) & 0x3ffu) << 16)

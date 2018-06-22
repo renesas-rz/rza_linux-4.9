@@ -29,6 +29,8 @@
 #include <linux/delay.h>
 #include <linux/uaccess.h>
 #include <video/of_display_timing.h>
+#include <video/of_videomode.h>
+#include <video/videomode.h>
 #include "vdc5fb.h"
 #include "vdc5fb-regs.h"
 
@@ -843,7 +845,8 @@ static int vdc5fb_init_outcnt(struct vdc5fb_priv *priv)
 	struct vdc5fb_pdata *pdata = priv_to_pdata(priv);
 	u32 tmp;
 
-	vdc5fb_write(priv, OUT_CLK_PHASE, D_OUT_CLK_PHASE);
+	vdc5fb_write(priv, OUT_CLK_PHASE, OUTCNT_LCD_EDGE(pdata->data_clk_phase));
+
 	vdc5fb_write(priv, OUT_BRIGHT1, PBRT_G(512));
 	vdc5fb_write(priv, OUT_BRIGHT2, (PBRT_B(512) | PBRT_R(512)));
 	tmp = (CONT_G(128) | CONT_B(128) | CONT_R(128));
@@ -1692,6 +1695,22 @@ static int vdc5fb_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev, "Failed to get video mode from DT\n");
 		else
 			pdata->videomode = of_mode;
+
+		/* A fb_videomode structure does not have all the same parameters
+		 * that were specified in the DT.
+		 * So we have to also get the full video mode from DT and pull
+		 * out the information we need. */
+		{
+			struct videomode of_vm;
+			ret = of_get_videomode(np, &of_vm, OF_USE_NATIVE_MODE);
+			if (ret)
+				dev_err(&pdev->dev, "Failed to get full video mode from DT\n");
+			else {
+				/* save value of pixelclk-active */
+				if (of_vm.flags & DISPLAY_FLAGS_PIXDATA_POSEDGE)
+					pdata->data_clk_phase = 1;
+			}
+		}
 	}
 
 	if (!pdata->videomode) {

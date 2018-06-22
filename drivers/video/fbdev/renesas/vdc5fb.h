@@ -149,6 +149,7 @@ struct vdc5fb_pdata {
 	unsigned long fb_phys_size;
 	unsigned long flm_max;
 	int out_format;
+	int data_clk_phase;
 	int use_lvds;
 	int flags;
 #define	FLAGS_RESIZE	0x01	/* enable resize */
