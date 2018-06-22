@@ -381,16 +381,16 @@
 				clock-frequency = <33325000>; /* P1 clk / 2 */
 				hactive = <800>;
 				vactive = <480>;
-				hback-porch = <46>;
-				hfront-porch = <210>;
-				vback-porch = <23>;
-				vfront-porch = <22>;
-				hsync-len = <40>; /* max */
-				vsync-len = <20>; /* max */
-				hsync-active = <1>; /* HIGH */
-				vsync-active = <1>; /* HIGH */
-				de-active = <0>; /* LOW */
-				pixelclk-active = <0>; /* ??? */
+				hback-porch = <26>;		/* back porch = 'HS Blanking'(46) - hsync-len(20) */
+				hfront-porch = <210>;		/* 'HS Front Porch (210)' */
+				vback-porch = <13>;		/* back porch = 'VS Blanking'(23) - vsync-len(10) */
+				vfront-porch = <22>;		/* 'VS Front Porch(22)' */
+				hsync-len = <20>;		/* pulse width of HSYNC (min=1, max=40) */
+				vsync-len = <10>;		/* pulse width of VSYNC (min=1, max=20) */
+				hsync-active = <1>; 		/* HSYNC pulse is: 0=Active LOW, 1=Active HIGH */
+				vsync-active = <1>; 		/* VSYNC pulse is: 0=Active LOW, 1=Active HIGH */
+				de-active = <0>; 		/* Data Enable signal is: 0=Active LOW , 1= Active HIGH */
+				pixelclk-active = <0>; 		/* Pixel Data clock polarity: 0=drive pixel data on falling edge and sample data on rising edge */
 			};
 		};
 	};
