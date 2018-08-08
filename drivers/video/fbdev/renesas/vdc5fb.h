@@ -157,6 +157,7 @@ struct vdc5fb_pdata {
 #define	FLAGS_DS	0x04	/* enable down-scale */
 	unsigned char tcon_sel[LCD_MAX_TCON];
 	struct vdc5fb_layer layers[4];
+	int double_buffer;	/* double space to allow for double buffering */
 };
 #endif /* __KERNEL__ */
 

@@ -1414,21 +1414,25 @@ static int vdc5fb_set_par(struct fb_info *info)
 static int vdc5fb_pan_display(struct fb_var_screeninfo *var,
 	struct fb_info *info)
 {
-//	struct vdc5fb_priv *priv = info->par;
-//	unsigned long start, end;
-//	u32 tmp;
+	struct vdc5fb_priv *priv = info->par;
+	unsigned long start, end;
+	u32 tmp;
 /*	struct vdc5fb_pdata *pdata = priv_to_pdata(priv);	*/
 
 /*	pm_runtime_get_sync();	*/
 
-//	start = var->yoffset * info->fix.line_length;
-//	start += var->xoffset * (info->var.bits_per_pixel >> 3);
-//	end = start + info->var.yres * info->fix.line_length;
+	start = var->yoffset * info->fix.line_length;
+	start += var->xoffset * (info->var.bits_per_pixel >> 3);
+	end = start + info->var.yres * info->fix.line_length;
 
 //	vdc5fb_write(priv, GR_OIR_FLM2, priv->fb_phys_addr + start);
 //	tmp = (GR_IBUS_VEN | GR_P_VEN | GR_UPDATE);
 //	vdc5fb_update_regs(priv, GR_OIR_UPDATE, tmp, 1);
 
+	/* Assume Graphics layer 2 */
+	vdc5fb_write(priv, GR2_FLM2, priv->fb_phys_addr + start);
+	tmp = (GR_IBUS_VEN | GR_P_VEN | GR_UPDATE);
+	vdc5fb_update_regs(priv, GR2_UPDATE, tmp, 1);
 
 /*	pm_runtime_put_sync();	*/
 	return 0;
@@ -1560,6 +1564,9 @@ struct vdc5fb_pdata *vdc5fb_parse_dt(struct platform_device *pdev)
 
 	if (!of_property_read_u32(np, "use_lvds", &val))
 		pdata->use_lvds	= val;
+
+	if (of_property_read_bool(np, "double_buffer"))
+		pdata->double_buffer = 1;
 
 	if (!of_property_read_u32_array(np, "tcon_sel", val_array, 7)) {
 		pdata->tcon_sel[LCD_TCON0] = val_array[0];
@@ -1741,6 +1748,8 @@ static int vdc5fb_probe(struct platform_device *pdev)
 
 	info->var.xres = info->var.xres_virtual = pdata->videomode->xres;
 	info->var.yres = info->var.yres_virtual = pdata->videomode->yres;
+	if (pdata->double_buffer)
+		info->var.yres_virtual *= 2;
 	info->var.width = pdata->panel_width;
 	info->var.height = pdata->panel_height;
 	info->var.activate = FB_ACTIVATE_NOW;
@@ -1755,7 +1764,10 @@ static int vdc5fb_probe(struct platform_device *pdev)
 	info->fix.type = FB_TYPE_PACKED_PIXELS;
 	info->fix.type_aux = 0;
 	info->fix.line_length = info->var.xres * (info->var.bits_per_pixel / 8);
-	info->fix.smem_len = info->fix.line_length * info->var.yres;
+	if (pdata->double_buffer)
+		info->fix.smem_len = info->fix.line_length * info->var.yres * 2;
+	else
+		info->fix.smem_len = info->fix.line_length * info->var.yres;
 
 	/* Frame Buffer (Physical) Address
 	 *
@@ -1768,8 +1780,12 @@ static int vdc5fb_probe(struct platform_device *pdev)
 
 		priv->fb_phys_addr = priv->pdata->fb_phys_addr;
 
-		buf = ioremap_nocache(priv->pdata->fb_phys_addr,
-				      priv->pdata->fb_phys_size);
+		if (pdata->double_buffer)
+			buf = ioremap_nocache(priv->pdata->fb_phys_addr,
+					      priv->pdata->fb_phys_size * 2);
+		else
+			buf = ioremap_nocache(priv->pdata->fb_phys_addr,
+					      priv->pdata->fb_phys_size);
 		priv->fb_nofree = 1;
 		pdata->layers[2].base = priv->pdata->fb_phys_addr;
 	} else {
@@ -1804,7 +1820,12 @@ static int vdc5fb_probe(struct platform_device *pdev)
 	info->par = priv;
 
 	info->var.xres_virtual = info->var.xres;
-	info->var.yres_virtual = info->var.yres;
+	if (pdata->double_buffer) {
+		info->var.yres_virtual = info->var.yres * 2;
+		info->fix.ypanstep = 1;	/* can step 1 line at a time */
+	}
+	else
+		info->var.yres_virtual = info->var.yres;
 	info->var.xoffset = 0;
 	info->var.yoffset = 0;
 	info->var.pixclock = pdata->videomode->pixclock;
