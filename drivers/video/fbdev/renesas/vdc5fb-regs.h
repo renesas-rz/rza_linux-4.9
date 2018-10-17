@@ -448,7 +448,6 @@ enum {
 	LVDSFCL,
 	LCLKSELR,
 	LPLLSETR,
-	LPLLMONR,
 	LPHYACC,
 
 	/* SYSTEM CONTROLLER */
@@ -917,7 +916,6 @@ static unsigned long vdc5fb_offsets[VDC5FB_MAX_REGS] = {
 	[LVDSFCL]		= 0x0634,
 	[LCLKSELR]		= 0x0650,
 	[LPLLSETR]		= 0x0654,
-	[LPLLMONR]		= 0x0658,
 	[LPHYACC]		= 0x065C,
 
 	/* SYSTEM CONTROLLER */
