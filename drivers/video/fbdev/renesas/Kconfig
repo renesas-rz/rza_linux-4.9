@@ -6,6 +6,7 @@ config FB_VDC5
 	select FB_SYS_COPYAREA
 	select FB_SYS_IMAGEBLIT
 	select FB_SYS_FOPS
+	select FB_MODE_HELPERS
 	select VIDEOMODE_HELPERS
 	help
 	  Frame-buffer device for the Renesas RZ/A1 based boards.

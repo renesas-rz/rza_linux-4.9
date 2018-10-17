@@ -738,11 +738,11 @@ static int vdc5fb_init_graphics(struct vdc5fb_priv *priv)
 		switch (i) {
 			case 0:	tmp = 0x00800000;	// GR0 = Green
 				break;
-			case 1:	tmp = 0x00000080;	// GR1 = red
+			case 1:	tmp = 0x00000080;	// GR1 = Red
 				break;
 			case 2:	tmp = 0x00008000;	// GR2 = Blue
 				break;
-			case 3:	tmp = 0x00008080;	// GR3 = purple
+			case 3:	tmp = 0x00008080;	// GR3 = Purple
 		}
 		vdc5fb_iowrite32(tmp, update_addr[i] + GR_BASE_OFFSET);	/* Background color (0-G-B-R) */
 #endif
@@ -818,8 +818,10 @@ static int vdc5fb_init_graphics(struct vdc5fb_priv *priv)
 	vdc5fb_write(priv, GR_VIN_AB1, tmp);
 	vdc5fb_write(priv, GR_VIN_BASE, 0x00FF00);	/* Background color (0-G-B-R) */
 
-	/* Set the LCD margins, other wise the pixels will be cliped
-	  (and background color will show through instead */
+	/* Set the LCD margins, otherwise the pixels will be cliped
+	  (and background color will show through instead) */
+	/* Basically, if the resolution of the VIN is set less than the scalers, the VIN will
+	 * cut off the excess pixel data coming from the scallers. */
 	tmp = GR_GRC_VW(priv->panel_pixel_yres);
 	tmp |= GR_GRC_VS(mode->vsync_len + mode->upper_margin);
 	vdc5fb_write(priv, GR_VIN_AB2, tmp);
