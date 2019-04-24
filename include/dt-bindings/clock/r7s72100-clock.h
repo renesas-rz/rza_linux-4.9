@@ -14,6 +14,7 @@
 
 /* MSTP3 */
 #define R7S72100_CLK_MTU2	3
+#define R7S72100_CLK_CAN	2
 
 /* MSTP4 */
 #define R7S72100_CLK_SCIF0	7
