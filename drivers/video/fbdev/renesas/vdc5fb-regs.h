@@ -930,7 +930,6 @@ static unsigned long vdc5fb_offsets[VDC5FB_MAX_REGS] = {
 };
 
 /* INTERRUPT NAME */
-#if 0 /* interrupts not used */
 static const char *irq_names[VDC5FB_MAX_IRQS] = {
 	[S0_VI_VSYNC]		= "s0_vi_vsync",
 	[S0_LO_VSYNC]		= "s0_lo_vsync",
@@ -956,7 +955,6 @@ static const char *irq_names[VDC5FB_MAX_IRQS] = {
 	[IV7_VBUFERR]		= "iv7_vbuferr",
 	[IV8_VBUFERR]		= "iv8_vbuferr",
 };
-#endif
 
 /************************************************************************/
 /* REGISTER BITS */
